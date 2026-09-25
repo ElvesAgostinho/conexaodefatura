@@ -33,6 +33,7 @@ _NIF_RE = re.compile(r"^[A-Za-z0-9\-/.]{1,30}$")
 HEADER_FIELDS = (
     "source_document_id", "document_type", "series", "document_number", "document_date",
     "customer_name", "customer_nif", "currency", "subtotal", "tax_amount", "total",
+    "document_hash", "hash_control",
 )
 REQUIRED_HEADER_FIELDS = (
     "source_document_id", "document_type", "series", "document_number", "document_date",
@@ -47,7 +48,10 @@ REQUIRED_LINE_FIELDS = ("description", "quantity", "unit_price", "tax_rate", "ta
 _MAX_LEN = {
     "source_document_id": 100, "series": 60, "document_number": 60, "customer_name": 200,
     "product_code": 60, "description": 500, "tax_exemption_code": 20,
+    "document_hash": 1024, "hash_control": 70,
 }
+# Hash/assinatura emitida pelo sistema de faturação: texto sem espaços (base64, hexadecimal, ...).
+_HASH_RE = re.compile(r"^[\x21-\x7E]+$")
 
 
 class CanonicalError(ValueError):
@@ -83,6 +87,10 @@ class CanonicalDocument:
     total: Decimal
     customer_nif: str = ""
     currency: str = "AOA"
+    # Assinatura (hash) da fatura feita pelo programa que a emitiu, e a versão da chave usada.
+    # O Gateway não assina nada: transporta o valor original, tal como está no sistema de faturação.
+    document_hash: str = ""
+    hash_control: str = ""
     lines: list[CanonicalLine] = field(default_factory=list)
 
     def to_json(self) -> dict[str, Any]:
@@ -172,7 +180,7 @@ def parse_document(data: Any) -> CanonicalDocument:
 
     texts = {}
     for name in ("source_document_id", "document_type", "series", "document_number", "customer_name",
-                 "customer_nif", "currency"):
+                 "customer_nif", "currency", "document_hash", "hash_control"):
         texts[name] = _text(data.get(name))
         _check_len(name, texts[name], errors)
     texts["document_type"] = texts["document_type"].upper()
@@ -183,6 +191,9 @@ def parse_document(data: Any) -> CanonicalDocument:
         errors.append("currency: código ISO de 3 letras (ex.: AOA).")
     if texts["customer_nif"] and not _NIF_RE.match(texts["customer_nif"]):
         errors.append("customer_nif: formato inválido.")
+    for name in ("document_hash", "hash_control"):
+        if texts[name] and not _HASH_RE.match(texts[name]):
+            errors.append(f"{name}: só caracteres visíveis, sem espaços.")
 
     document_date = _date(data.get("document_date"), "document_date", errors)
     amounts = {
@@ -213,6 +224,8 @@ def parse_document(data: Any) -> CanonicalDocument:
         customer_name=texts["customer_name"],
         customer_nif=texts["customer_nif"],
         currency=texts["currency"],
+        document_hash=texts["document_hash"],
+        hash_control=texts["hash_control"],
         subtotal=amounts["subtotal"],
         tax_amount=amounts["tax_amount"],
         total=amounts["total"],

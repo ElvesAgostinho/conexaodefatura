@@ -34,6 +34,20 @@ Invoice.total          = subtotal + tax_amount
   guarda decimais como vírgula flutuante de 64 bits).
 - Moeda por omissão: `AOA`.
 
+## Hash / assinatura da fatura
+
+Campos opcionais do cabeçalho, copiados **sem alteração** do sistema de faturação:
+
+| Campo | Conteúdo |
+|---|---|
+| `document_hash` | Assinatura (hash) que o programa emissor calculou para a fatura (até 1024 caracteres visíveis, sem espaços: base64, hexadecimal, ...) |
+| `hash_control` | Versão da chave usada nessa assinatura (até 70 caracteres) |
+
+O Gateway **não assina nem recalcula** nada: a assinatura é responsabilidade do software
+que emite a fatura (ex.: HOST). Os dois campos fazem parte da impressão digital do
+documento: se mudarem numa fatura já comunicada, é tratado como conflito. O assistente
+de mapeamento sugere colunas como `Hash`, `Assinatura`, `HashControl` ou `VersaoChave`.
+
 ## Estados
 
 `IMPORTED → VALIDATED → QUEUED → SENDING → SENT/CONFIRMED`, com `REJECTED` (recusada pela

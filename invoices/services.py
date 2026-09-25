@@ -110,7 +110,7 @@ def _save(invoice: Invoice, source, doc: CanonicalDocument, data: dict, fingerpr
     invoice.source_data = sanitize(json.loads(json.dumps(data, default=str)))
     invoice.content_hash = fingerprint
     for name in ("document_type", "series", "document_number", "document_date", "customer_name",
-                 "customer_nif", "currency", "subtotal", "tax_amount", "total"):
+                 "customer_nif", "currency", "subtotal", "tax_amount", "total", "document_hash", "hash_control"):
         setattr(invoice, name, getattr(doc, name))
     errors = validate_document(doc)
     invoice.validation_errors = errors
@@ -138,7 +138,8 @@ def revalidate(invoice: Invoice) -> list[str]:
         raise DocumentConflict("Documento já comunicado à AGT: não é revalidado.", invoice)
     data = {name: getattr(invoice, name) for name in (
         "source_document_id", "document_type", "series", "document_number", "document_date",
-        "customer_name", "customer_nif", "currency", "subtotal", "tax_amount", "total")}
+        "customer_name", "customer_nif", "currency", "subtotal", "tax_amount", "total",
+        "document_hash", "hash_control")}
     data["lines"] = [
         {name: getattr(item, name) for name in (
             "line_number", "product_code", "description", "quantity", "unit_price", "discount",

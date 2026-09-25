@@ -27,6 +27,8 @@ HEADER_LABELS = {
     "subtotal": "Subtotal (sem imposto)",
     "tax_amount": "Total do imposto",
     "total": "Total do documento",
+    "document_hash": "Hash / assinatura da fatura",
+    "hash_control": "Controlo do hash (versão da chave)",
 }
 LINE_LABELS = {
     "line_number": "Número da linha",

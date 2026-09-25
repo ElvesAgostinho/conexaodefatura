@@ -88,6 +88,8 @@ def build_payload(invoice: Invoice) -> dict[str, Any]:
         "document_date": invoice.document_date.isoformat(),
         "customer_name": invoice.customer_name,
         "customer_nif": invoice.customer_nif,
+        "document_hash": invoice.document_hash,
+        "hash_control": invoice.hash_control,
         "currency": invoice.currency,
         "subtotal": str(invoice.subtotal),
         "tax_amount": str(invoice.tax_amount),

@@ -38,6 +38,10 @@ HEADER_SYNONYMS = {
                    "tax", "vat"],
     "total": ["totaldocumento", "totalfatura", "totalfactura", "totalgeral", "valortotal", "totalcomiva",
               "grosstotal", "total", "amount"],
+    "document_hash": ["hash", "hashdocumento", "hashdoc", "hashfatura", "hashfactura", "assinatura",
+                      "assinaturadigital", "signature", "docsignature"],
+    "hash_control": ["hashcontrol", "hashcontrolo", "controlohash", "versaochave", "versaohash", "keyversion",
+                     "hashversion"],
 }
 LINE_SYNONYMS = {
     "line_number": ["numlinha", "nlinha", "linha", "numerolinha", "linenumber", "lineno", "ordem", "ord", "seq"],

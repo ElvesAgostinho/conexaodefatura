@@ -30,11 +30,20 @@ class AgtConfigurationTests(TestCase):
         self.assertEqual(AgtConfiguration.for_company(self.company).pk, config.pk)
         config.full_clean()
 
-    def test_real_environment_requires_url_and_certificate(self):
+    def test_real_environment_requires_only_url(self):
+        # O Gateway não emite faturas: o certificado é do software de faturação do cliente e é opcional.
         config = AgtConfiguration(company=self.company, environment="PRODUCTION")
         with self.assertRaises(ValidationError) as ctx:
             config.full_clean()
-        self.assertEqual(set(ctx.exception.message_dict), {"base_url", "software_certificate_number"})
+        self.assertEqual(set(ctx.exception.message_dict), {"base_url"})
+        AgtConfiguration(company=self.company, environment="PRODUCTION",
+                         base_url="https://exemplo.invalid/agt").full_clean()
+
+    def test_missing_list_speaks_of_client_credentials(self):
+        with mock.patch.dict(os.environ, {}, clear=True):
+            missing = AgtConfiguration(company=self.company, base_url="https://x.invalid").missing_for_real_sending()
+        self.assertFalse(any("certificado" in m for m in missing))
+        self.assertTrue(any("credencial do cliente AGT_CLIENT_SECRET" in m for m in missing))
 
     def test_https_only(self):
         config = AgtConfiguration(company=self.company, base_url="http://exemplo.invalid/api")

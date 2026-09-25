@@ -142,7 +142,7 @@ class MappingAssistantForm(forms.Form):
         self.fields["link_column"].choices = line_choices[1:]
         for name, label in HEADER_LABELS.items():
             self.fields[f"h_{name}"] = forms.ChoiceField(label=label, choices=doc_choices, required=False)
-            if name != "source_document_id":
+            if name not in ("source_document_id", "document_hash", "hash_control"):  # vêm sempre da origem
                 self.fields[f"hd_{name}"] = forms.CharField(label="ou valor fixo", required=False, max_length=100, widget=forms.TextInput(attrs={"placeholder": "ou valor fixo"}))
         for name, label in LINE_LABELS.items():
             self.fields[f"l_{name}"] = forms.ChoiceField(label=label, choices=line_choices, required=False)

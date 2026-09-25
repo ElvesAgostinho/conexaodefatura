@@ -28,7 +28,7 @@
       </div>
     </section>
     <section class="card">
-      <div class="card-head"><h2>Software certificado</h2></div>
+      <div class="card-head"><h2>Software de faturação do cliente</h2><span class="hint">quem emite as faturas</span></div>
       <div class="card-body">
         {% include "dashboard/_field.html" with field=form.software_certificate_number %}
         {% include "dashboard/_field.html" with field=form.software_name %}
@@ -47,9 +47,9 @@
       </div>
     </section>
     <section class="card">
-      <div class="card-head"><h2>Credenciais</h2><span class="hint">ficheiro .env do servidor</span></div>
+      <div class="card-head"><h2>Credenciais da AGT do cliente</h2><span class="hint">ficheiro .env do servidor</span></div>
       <div class="card-body">
-        <p class="help" style="margin-top:0">Os segredos da AGT nunca são guardados na base de dados nem mostrados aqui. Indica-se apenas se estão definidos no servidor.</p>
+        <p class="help" style="margin-top:0">As credenciais são do <strong>contribuinte</strong>: o cliente obtém-nas junto da AGT e fornece-as para serem colocadas no ficheiro .env do servidor. Nunca são guardadas na base de dados nem mostradas aqui — indica-se apenas se estão definidas.</p>
       </div>
       <table><tbody>
         {% for name, ok in secrets.items %}

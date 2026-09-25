@@ -75,3 +75,7 @@ class WizardAgainstRealSqlServer(DashboardTestCase):
         synced = self.client.post(f"/ligacoes/{source.pk}/sincronizar/", follow=True)
         self.assertContains(synced, "novos")
         self.assertGreater(Invoice.objects.filter(source=source).count(), 0)
+        # O hash/assinatura da origem é lido e guardado tal como está no sistema de faturação.
+        first = Invoice.objects.filter(source=source).order_by("source_document_id").first()
+        self.assertTrue(first.document_hash)
+        self.assertEqual(first.hash_control, "1")

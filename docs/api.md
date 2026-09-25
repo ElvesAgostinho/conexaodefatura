@@ -56,6 +56,8 @@ origem. Chave em falta, inválida ou revogada: `401`. Demasiados pedidos: `429`
   Recomenda-se texto, para evitar arredondamentos de vírgula flutuante.
 - `line.total` = quantidade × preço − desconto (sem imposto). `total` = `subtotal` + `tax_amount`.
 - Taxa 0% exige `tax_exemption_code`.
+- Opcional: `document_hash` (assinatura/hash da fatura feita pelo vosso programa) e `hash_control`
+  (versão da chave). O Gateway transporta-os sem alteração.
 - Campos não previstos são recusados. O cliente não escolhe a origem nem o estado.
 
 ### Respostas

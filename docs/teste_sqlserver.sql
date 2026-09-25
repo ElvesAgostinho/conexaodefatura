@@ -20,6 +20,8 @@ CREATE TABLE dbo.Documentos (
     TotalIVA        decimal(15,2)  NOT NULL,
     TotalDocumento  decimal(15,2)  NOT NULL,
     [Obs Interna]   nvarchar(200)  NULL,
+    Hash            varchar(512)   NULL,  -- assinatura fictícia (hexadecimal)
+    HashControl     varchar(10)    NULL,
     DataCriacao     datetime2(0)   NOT NULL DEFAULT SYSDATETIME(),
     CONSTRAINT UQ_Documentos UNIQUE (TipoDoc, Serie, NumDoc)
 );
@@ -77,6 +79,8 @@ VALUES ('FT', 'FT2026', 'FT FT2026/4', DATEADD(day, -1, CAST(GETDATE() AS date))
 SET @d = SCOPE_IDENTITY();
 INSERT dbo.DocumentoLinhas (DocumentoId, NumLinha, CodArtigo, Descricao, Quantidade, PrecoUnitario, TaxaIVA, ValorIVA, TotalLinha)
 VALUES (@d, 1, 'ALOJ', N'Alojamento — 3 noites', 3, 15000, 14, 6300.00, 45000.00);
+-- Hash fictício em cada documento (não é uma assinatura real)
+UPDATE dbo.Documentos SET Hash = CONVERT(varchar(512), CAST(NumDoc + '|' + CONVERT(varchar(10), DataDoc, 120) AS varbinary(200)), 2), HashControl = '1';
 GO
 IF USER_ID('gateway_leitura') IS NULL CREATE USER [gateway_leitura] FOR LOGIN [gateway_leitura];
 ALTER ROLE db_datareader ADD MEMBER [gateway_leitura];

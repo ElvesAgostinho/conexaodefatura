@@ -118,7 +118,8 @@ class RealSqlServerAutoSetupTests(TestCase):
         s = suggest(db)
         self.assertTrue(s.complete, s.notes)
         self.assertEqual((s.documents_table.qualified, s.link_column), ("dbo.Documentos", "DocumentoId"))
-        self.assertEqual(len(s.header), 11)
+        self.assertEqual(len(s.header), 13)  # 11 campos + hash e controlo do hash
+        self.assertEqual((s.header['document_hash'], s.header['hash_control']), ('Hash', 'HashControl'))
         self.assertEqual(len(s.lines), 10)
 
     @skipUnless(os.environ.get("GATEWAY_IT_MSSQL_ADMIN") == "windows", "Sem conta Windows de administrador")

@@ -1,5 +1,10 @@
 """Configuração da comunicação com a AGT, por empresa.
 
+O Gateway é apenas o canal de comunicação: não emite faturas nem as assina. As credenciais
+da AGT são do CONTRIBUINTE (a empresa cliente), que as obtém junto da AGT e as fornece; os
+dados de certificação são os do software de faturação do cliente (ex.: HOST), que emite
+as faturas.
+
 Só guarda parâmetros NÃO sensíveis. Segredos (client secret, chave privada e a sua
 senha) ficam no .env: AGT_* para a configuração por omissão, ou AGT_<PREFIXO>_* quando a
 empresa tem um prefixo de credenciais próprio.
@@ -34,9 +39,13 @@ class AgtConfiguration(models.Model):
         "endereço do serviço AGT", blank=True,
         help_text="Endereço oficial indicado pela AGT para o ambiente escolhido (https).",
     )
-    software_certificate_number = models.CharField("n.º de certificado do software", max_length=50, blank=True)
-    software_name = models.CharField("nome do software", max_length=100, blank=True)
-    software_version = models.CharField("versão do software", max_length=30, blank=True)
+    # Dados do software que EMITE as faturas (o sistema de faturação do cliente), se a AGT os pedir.
+    software_certificate_number = models.CharField(
+        "n.º de certificado do software de faturação", max_length=50, blank=True,
+        help_text="Certificado AGT do programa que emite as faturas (ex.: HOST). Fornecido pelo cliente ou "
+                  "pelo fornecedor desse programa. O Gateway não emite faturas.")
+    software_name = models.CharField("nome do software de faturação", max_length=100, blank=True)
+    software_version = models.CharField("versão do software de faturação", max_length=30, blank=True)
     client_id = models.CharField("client ID", max_length=200, blank=True)
     credentials_prefix = models.CharField(
         "prefixo das credenciais", max_length=30, blank=True, validators=[validate_credentials_prefix],
@@ -90,13 +99,8 @@ class AgtConfiguration(models.Model):
         if self.base_url and not self.base_url.lower().startswith("https://"):
             errors["base_url"] = "Tem de usar https://."
         if not self.is_simulation:
-            required = {
-                "base_url": self.base_url,
-                "software_certificate_number": self.software_certificate_number,
-            }
-            for field_name, value in required.items():
-                if not value:
-                    errors[field_name] = "Obrigatório fora do modo simulação."
+            if not self.base_url:
+                errors["base_url"] = "Obrigatório fora do modo simulação."
         if errors:
             raise ValidationError(errors)
 
@@ -105,8 +109,6 @@ class AgtConfiguration(models.Model):
         missing = []
         if not self.base_url:
             missing.append("endereço do serviço AGT")
-        if not self.software_certificate_number:
-            missing.append("n.º de certificado do software")
-        missing += [f"variável {name} no .env" for name, ok in self.secrets_status().items()
+        missing += [f"credencial do cliente {name} no .env" for name, ok in self.secrets_status().items()
                     if not ok and not name.endswith("PRIVATE_KEY_PASSWORD")]
         return missing

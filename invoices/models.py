@@ -57,6 +57,9 @@ class Invoice(models.Model):
     document_date = models.DateField("data")
     customer_name = models.CharField("cliente", max_length=200)
     customer_nif = models.CharField("NIF do cliente", max_length=30, blank=True)
+    document_hash = models.TextField("hash / assinatura da fatura", blank=True,
+                                     help_text="Valor original do sistema de faturação (o Gateway não assina).")
+    hash_control = models.CharField("controlo do hash (versão da chave)", max_length=70, blank=True)
     currency = models.CharField("moeda", max_length=3, default="AOA")
     subtotal = models.DecimalField("subtotal", **AMOUNT)
     tax_amount = models.DecimalField("imposto", **AMOUNT)
