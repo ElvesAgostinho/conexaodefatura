@@ -1,0 +1,29 @@
+# Segredos: nunca versionar
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*.crt
+secrets/
+
+# Relatórios de estrutura do HOST (informação interna do cliente)
+reports/
+
+# Python / Django
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.sqlite3
+staticfiles/
+media/
+*.log
+.coverage
+htmlcov/
+
+# IDE
+.vscode/
+.idea/

@@ -1,0 +1,48 @@
+{% extends "dashboard/base.html" %}
+{% block title %}Configuração AGT{% endblock %}
+{% block content %}
+<h1>Configuração AGT</h1>
+{% if config.is_simulation %}
+  <div class="banner">Modo <strong>simulação</strong>: os documentos são marcados como aceites sem nada ser enviado à AGT.</div>
+{% else %}
+  <div class="banner bad">A comunicação real com a AGT só funciona depois de implementada a especificação técnica oficial.
+  {% if missing %}Falta ainda: {{ missing|join:", " }}.{% endif %}</div>
+{% endif %}
+
+<form method="post">
+  {% csrf_token %}
+  <div class="grid2">
+    <div class="panel">
+      <h2 style="margin-top:0">Ligação</h2>
+      {% include "dashboard/_field.html" with field=form.environment %}
+      {% include "dashboard/_field.html" with field=form.base_url %}
+      {% include "dashboard/_field.html" with field=form.client_id %}
+      {% include "dashboard/_field.html" with field=form.credentials_prefix %}
+    </div>
+    <div class="panel">
+      <h2 style="margin-top:0">Software certificado</h2>
+      {% include "dashboard/_field.html" with field=form.software_certificate_number %}
+      {% include "dashboard/_field.html" with field=form.software_name %}
+      {% include "dashboard/_field.html" with field=form.software_version %}
+    </div>
+    <div class="panel">
+      <h2 style="margin-top:0">Envio</h2>
+      {% include "dashboard/_field.html" with field=form.auto_send %}
+      {% include "dashboard/_field.html" with field=form.timeout_seconds %}
+      {% include "dashboard/_field.html" with field=form.max_attempts %}
+      {% include "dashboard/_field.html" with field=form.retry_delay_seconds %}
+    </div>
+    <div class="panel">
+      <h2 style="margin-top:0">Credenciais (ficheiro .env)</h2>
+      <p class="muted">Os segredos nunca são guardados na base de dados nem mostrados no painel. Só se indica se estão definidos no servidor.</p>
+      <table>
+        {% for name, ok in secrets.items %}
+        <tr><td class="mono">{{ name }}</td><td>{% if ok %}<span class="badge b-ok">definida</span>{% else %}<span class="badge b-warn">em falta</span>{% endif %}</td></tr>
+        {% endfor %}
+      </table>
+    </div>
+  </div>
+  {% if editable %}<button class="btn primary" type="submit">Guardar</button>{% else %}<p class="muted">Só administradores podem alterar esta configuração.</p>{% endif %}
+  {% if config.updated_by %}<p class="muted">Última alteração: {{ config.updated_at|date:"d/m/Y H:i" }} por {{ config.updated_by }}.</p>{% endif %}
+</form>
+{% endblock %}

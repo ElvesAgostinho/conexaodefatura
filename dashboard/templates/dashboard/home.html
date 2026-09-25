@@ -1,0 +1,53 @@
+{% extends "dashboard/base.html" %}
+{% block title %}Início{% endblock %}
+{% block content %}
+<div class="header-row">
+  <h1>{{ nav_company.name }} <span class="muted" style="font-weight:400;font-size:1rem">NIF {{ nav_company.nif }}</span></h1>
+  {% if can_operate and queued %}
+  <form method="post" action="{% url 'dashboard:run_queue' %}">{% csrf_token %}<button class="btn primary" type="submit">Processar fila agora ({{ queued }})</button></form>
+  {% endif %}
+</div>
+
+{% if agt.is_simulation %}
+  <div class="banner">Modo <strong>simulação</strong>: nenhum documento é enviado à AGT. <a href="{% url 'dashboard:agt' %}">Configuração AGT</a></div>
+{% elif agt_missing %}
+  <div class="banner bad">Configuração AGT incompleta: falta {{ agt_missing|join:", " }}.</div>
+{% endif %}
+{% if stuck %}
+  <div class="banner bad">{{ stuck }} documento(s) presos em "A enviar" (envio interrompido). <a href="{% url 'dashboard:invoices' %}?estado=SENDING">Ver</a></div>
+{% endif %}
+
+<div class="cards">
+  <a class="card" href="{% url 'dashboard:invoices' %}"><div class="n">{{ total }}</div><div class="l">Documentos</div></a>
+  {% for g in groups %}
+  <a class="card" href="{% url 'dashboard:invoices' %}?grupo={{ g.key }}"><div class="n">{{ g.count }}</div><div class="l">{{ g.label }}</div></a>
+  {% endfor %}
+</div>
+
+<div class="grid2">
+  <div>
+    <h2>Últimos documentos</h2>
+    {% include "dashboard/_invoice_rows.html" with invoices=recent %}
+  </div>
+  <div>
+    <h2>Origens</h2>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Origem</th><th>Tipo</th><th>Última sincronização</th></tr></thead>
+      <tbody>
+      {% for s in sources %}
+        <tr>
+          <td><span class="mono">{{ s.code }}</span> {{ s.name }}{% if not s.active %} <span class="badge">inativa</span>{% endif %}</td>
+          <td>{{ s.get_kind_display }}</td>
+          <td>{% if s.kind == "DATABASE" %}
+              {% if s.last_sync_at %}{{ s.last_sync_at|date:"d/m/Y H:i" }} <span class="badge {% if s.last_sync_status == 'OK' %}b-ok{% elif s.last_sync_status == 'ERROR' %}b-bad{% else %}b-warn{% endif %}">{{ s.get_last_sync_status_display }}</span>{% else %}<span class="muted">nunca</span>{% endif %}
+              {% else %}<span class="muted">recebe pela API</span>{% endif %}</td>
+        </tr>
+      {% empty %}
+        <tr><td colspan="3" class="empty">Nenhuma origem configurada. <a href="{% url 'dashboard:sources' %}">Configurar</a></td></tr>
+      {% endfor %}
+      </tbody>
+    </table></div>
+    {% if confirmed_amount %}<p class="muted">Total validado pela AGT: <strong>{{ confirmed_amount|floatformat:2 }}</strong></p>{% endif %}
+  </div>
+</div>
+{% endblock %}

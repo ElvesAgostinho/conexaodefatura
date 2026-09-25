@@ -1,0 +1,9 @@
+{% extends "dashboard/base.html" %}
+{% block title %}Sem empresa{% endblock %}
+{% block body %}
+<div class="login"><div class="panel">
+  <h1>Sem acesso a empresas</h1>
+  <p class="muted">O seu utilizador ainda não tem acesso a nenhuma empresa ativa. Peça a um administrador.</p>
+  <form method="post" action="{% url 'dashboard:logout' %}">{% csrf_token %}<button class="btn" type="submit">Sair</button></form>
+</div></div>
+{% endblock %}

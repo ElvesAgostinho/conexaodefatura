@@ -1,0 +1,36 @@
+{% extends "dashboard/base.html" %}
+{% block title %}Origens{% endblock %}
+{% block content %}
+<div class="header-row">
+  <h1>Origens de documentos</h1>
+  {% if can_admin %}<a class="btn primary" href="{% url 'dashboard:source_new' %}">Nova origem</a>{% endif %}
+</div>
+<p class="muted">Cada origem é um sistema de faturação da empresa: uma base de dados lida pelo Gateway (só leitura) ou um sistema que envia os documentos pela API.</p>
+<div class="table-wrap"><table>
+  <thead><tr><th>Código</th><th>Nome / sistema</th><th>Tipo</th><th class="num">Documentos</th><th>Sincronização</th><th></th></tr></thead>
+  <tbody>
+  {% for s in sources %}
+    <tr>
+      <td class="mono">{{ s.code }}{% if not s.active %} <span class="badge">inativa</span>{% endif %}</td>
+      <td>{{ s.name }}{% if s.system %}<br><span class="muted">{{ s.system }}</span>{% endif %}</td>
+      <td>{{ s.get_kind_display }}{% if s.kind == "DATABASE" %}<br><span class="muted mono">{{ s.connection }}</span>{% endif %}</td>
+      <td class="num">{{ s.n_invoices }}</td>
+      <td>{% if s.kind == "DATABASE" %}
+          {% if not s.mapping %}<span class="badge b-warn">mapeamento por configurar</span>
+          {% elif s.last_sync_at %}{{ s.last_sync_at|date:"d/m/Y H:i" }} <span class="badge {% if s.last_sync_status == 'OK' %}b-ok{% elif s.last_sync_status == 'ERROR' %}b-bad{% else %}b-warn{% endif %}">{{ s.get_last_sync_status_display }}</span><br><span class="muted">{{ s.last_sync_message|truncatechars:160 }}</span>
+          {% else %}<span class="muted">nunca</span>{% endif %}
+          {% else %}<span class="muted">recebe pela API</span>{% endif %}</td>
+      <td><div class="actions">
+        {% if can_operate and s.kind == "DATABASE" %}
+          <form class="inline" method="post" action="{% url 'dashboard:source_test' s.pk %}">{% csrf_token %}<button class="btn small" type="submit">Testar ligação</button></form>
+          {% if s.mapping and s.active %}<form class="inline" method="post" action="{% url 'dashboard:source_sync' s.pk %}">{% csrf_token %}<button class="btn small" type="submit">Sincronizar</button></form>{% endif %}
+        {% endif %}
+        {% if can_admin %}<a class="btn small" href="{% url 'dashboard:source_edit' s.pk %}">Editar</a>{% endif %}
+      </div></td>
+    </tr>
+  {% empty %}
+    <tr><td colspan="6" class="empty">Nenhuma origem configurada.</td></tr>
+  {% endfor %}
+  </tbody>
+</table></div>
+{% endblock %}

@@ -1,0 +1,44 @@
+{% extends "dashboard/base.html" %}
+{% block title %}Chaves de API{% endblock %}
+{% block content %}
+<h1>Chaves de API</h1>
+<p class="muted">Cada sistema externo (ERP, POS, ...) envia os seus documentos para <code>{{ api_url }}</code> com o cabeçalho
+<code>Authorization: Api-Key &lt;chave&gt;</code>. Uma chave só vê os documentos da sua origem.</p>
+
+{% if new_key %}
+<div class="panel" style="border-color:var(--ok)">
+  <strong>Chave criada. Copie-a agora: não voltará a ser mostrada.</strong>
+  <div class="secret-key" style="margin-top:.5rem">{{ new_key }}</div>
+</div>
+{% endif %}
+
+<div class="panel">
+  <h2 style="margin-top:0">Nova chave</h2>
+  {% if has_api_source %}
+  <form method="post">
+    {% csrf_token %}
+    <div class="grid2">
+      <div>{% include "dashboard/_field.html" with field=form.name %}</div>
+      <div>{% include "dashboard/_field.html" with field=form.source %}</div>
+    </div>
+    <button class="btn primary" type="submit">Criar chave</button>
+  </form>
+  {% else %}
+  <p>Crie primeiro uma <a href="{% url 'dashboard:source_new' %}">origem do tipo API</a>.</p>
+  {% endif %}
+</div>
+
+<div class="table-wrap"><table>
+  <thead><tr><th>Nome</th><th>Origem</th><th>Prefixo</th><th>Criada</th><th>Último uso</th><th>Estado</th><th></th></tr></thead>
+  <tbody>
+  {% for k in keys %}
+    <tr>
+      <td>{{ k.name }}</td><td class="mono">{{ k.source.code }}</td><td class="mono">gw_{{ k.prefix }}_…</td>
+      <td>{{ k.created_at|date:"d/m/Y H:i" }}</td><td>{{ k.last_used_at|date:"d/m/Y H:i"|default:"—" }}</td>
+      <td>{% if k.active %}<span class="badge b-ok">ativa</span>{% else %}<span class="badge b-bad">revogada</span>{% endif %}</td>
+      <td>{% if k.active %}<form class="inline" method="post" action="{% url 'dashboard:api_key_revoke' k.pk %}" onsubmit="return confirm('Revogar esta chave? O sistema que a usa deixa de conseguir enviar documentos.')">{% csrf_token %}<button class="btn small danger" type="submit">Revogar</button></form>{% endif %}</td>
+    </tr>
+  {% empty %}<tr><td colspan="7" class="empty">Sem chaves.</td></tr>{% endfor %}
+  </tbody>
+</table></div>
+{% endblock %}

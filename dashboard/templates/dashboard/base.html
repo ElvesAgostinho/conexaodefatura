@@ -1,0 +1,58 @@
+{% load static %}<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Painel{% endblock %} · Gateway Fiscal</title>
+  <link rel="stylesheet" href="{% static 'dashboard/app.css' %}">
+</head>
+<body>
+{% block body %}
+<div class="layout">
+  <aside class="sidebar">
+    <div class="brand">Gateway Fiscal<small>Origens → AGT</small></div>
+
+    {% if nav_companies %}
+    <form method="post" action="{% url 'dashboard:select_company' %}">
+      {% csrf_token %}
+      <input type="hidden" name="next" value="{{ request.path }}">
+      <select name="company" onchange="this.form.submit()" aria-label="Empresa" style="width:100%">
+        {% for c in nav_companies %}<option value="{{ c.pk }}" {% if c.pk == nav_company.pk %}selected{% endif %}>{{ c.name }}</option>{% endfor %}
+      </select>
+      <noscript><button class="btn small" type="submit">Mudar</button></noscript>
+    </form>
+    {% endif %}
+
+    {% with url=request.resolver_match.url_name %}
+    <nav class="nav">
+      <a href="{% url 'dashboard:home' %}" class="{% if url == 'home' %}active{% endif %}">Início</a>
+      <a href="{% url 'dashboard:invoices' %}" class="{% if url == 'invoices' and not request.GET.grupo or url == 'invoice' %}active{% endif %}">Faturas</a>
+      <a class="sub {% if request.GET.grupo == 'pendentes' %}active{% endif %}" href="{% url 'dashboard:invoices' %}?grupo=pendentes">Pendentes</a>
+      <a class="sub {% if request.GET.grupo == 'enviadas' %}active{% endif %}" href="{% url 'dashboard:invoices' %}?grupo=enviadas">Enviadas</a>
+      <a class="sub {% if request.GET.grupo == 'rejeitadas' %}active{% endif %}" href="{% url 'dashboard:invoices' %}?grupo=rejeitadas">Rejeitadas</a>
+      <a class="sub {% if request.GET.grupo == 'erros' %}active{% endif %}" href="{% url 'dashboard:invoices' %}?grupo=erros">Erros</a>
+      <a href="{% url 'dashboard:sources' %}" class="{% if url == 'sources' or url == 'source_new' or url == 'source_edit' %}active{% endif %}">Origens</a>
+      <a href="{% url 'dashboard:agt' %}" class="{% if url == 'agt' %}active{% endif %}">Configuração AGT</a>
+      {% if nav_is_admin %}
+      <a href="{% url 'dashboard:api_keys' %}" class="{% if url == 'api_keys' %}active{% endif %}">Chaves de API</a>
+      <a href="{% url 'dashboard:audit' %}" class="{% if url == 'audit' %}active{% endif %}">Auditoria</a>
+      {% endif %}
+    </nav>
+    {% endwith %}
+
+    <div class="bottom">
+      {{ user.get_username }}{% if nav_role %} · {{ nav_role|lower }}{% endif %}
+      <form method="post" action="{% url 'dashboard:logout' %}" style="margin-top:.4rem">
+        {% csrf_token %}<button class="btn small" type="submit">Sair</button>
+      </form>
+    </div>
+  </aside>
+
+  <main>
+    {% for message in messages %}<div class="msg {{ message.tags }}">{{ message }}</div>{% endfor %}
+    {% block content %}{% endblock %}
+  </main>
+</div>
+{% endblock %}
+</body>
+</html>

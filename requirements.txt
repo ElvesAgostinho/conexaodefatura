@@ -1,0 +1,12 @@
+Django>=5.2,<5.3
+djangorestframework>=3.15
+SQLAlchemy>=2.0,<2.1
+python-dotenv>=1.0
+
+# Drivers (Gateway e HOST). Instalar apenas os necessários em cada cliente.
+pyodbc>=5.2            # SQL Server (requer "ODBC Driver 17/18 for SQL Server")
+psycopg[binary]>=3.2   # PostgreSQL
+PyMySQL>=1.1           # MySQL / MariaDB (leitura do HOST)
+oracledb>=2.0          # Oracle
+mssql-django>=1.6      # Gateway sobre SQL Server
+# mysqlclient>=2.2     # Gateway sobre MySQL/MariaDB (exige compilador/cliente MySQL)
