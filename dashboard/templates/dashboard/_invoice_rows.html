@@ -1,14 +1,14 @@
 <div class="table-wrap"><table>
-  <thead><tr><th>Documento</th><th>Data</th><th>Cliente</th><th>Origem</th><th class="num">Total</th><th>Estado</th></tr></thead>
+  <thead><tr><th>Documento</th><th>Data</th><th>Cliente</th>{% if not compact %}<th>Ligação</th>{% endif %}<th class="num">Total</th><th>Estado</th></tr></thead>
   <tbody>
   {% for inv in invoices %}
     <tr>
-      <td><a href="{% url 'dashboard:invoice' inv.pk %}">{{ inv.document_number }}</a></td>
+      <td><a class="row-link" href="{% url 'dashboard:invoice' inv.pk %}">{{ inv.document_number }}</a><span class="sub">{{ inv.document_type }} · série {{ inv.series }}</span></td>
       <td>{{ inv.document_date|date:"d/m/Y" }}</td>
-      <td>{{ inv.customer_name }}{% if inv.customer_nif %}<br><span class="muted">{{ inv.customer_nif }}</span>{% endif %}</td>
-      <td><span class="mono">{{ inv.source_system }}</span></td>
-      <td class="num">{{ inv.total|floatformat:2 }} {{ inv.currency }}</td>
-      <td><span class="badge st-{{ inv.status }}">{{ inv.get_status_display }}</span>{% if inv.simulated %} <span class="badge">simulação</span>{% endif %}</td>
+      <td>{{ inv.customer_name }}{% if inv.customer_nif %}<span class="sub">NIF {{ inv.customer_nif }}</span>{% endif %}</td>
+      {% if not compact %}<td><span class="pill plain">{{ inv.source_system }}</span></td>{% endif %}
+      <td class="num"><strong>{{ inv.total|floatformat:2 }}</strong> <span class="sub" style="display:inline">{{ inv.currency }}</span></td>
+      <td><span class="pill st-{{ inv.status }}">{{ inv.get_status_display }}</span></td>
     </tr>
   {% empty %}
     <tr><td colspan="6" class="empty">Sem documentos.</td></tr>

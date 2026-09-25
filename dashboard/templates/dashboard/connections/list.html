@@ -1,0 +1,61 @@
+{% extends "dashboard/base.html" %}
+{% block title %}Ligações{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <div class="crumbs"><a href="{% url 'dashboard:home' %}">Início</a> › Ligações</div>
+    <h1>Ligações</h1>
+    <div class="sub">Os sistemas de faturação desta empresa: o HOST, outro ERP, um POS… Cada um liga-se por base de dados ou por API.</div>
+  </div>
+</div>
+
+{% if can_admin %}
+<div class="conn-types">
+  <a class="conn-type" href="{% url 'dashboard:connection_new' 'base-de-dados' %}">
+    <div class="kpi-icon blue"><svg class="icon lg"><use href="#i-db"/></svg></div>
+    <div><strong>Ligar base de dados</strong><span>O Gateway lê as faturas diretamente da base de dados do sistema (só leitura). SQL Server, PostgreSQL, MySQL, Oracle…</span></div>
+    <svg class="icon go"><use href="#i-arrow"/></svg>
+  </a>
+  <a class="conn-type" href="{% url 'dashboard:connection_new' 'api' %}">
+    <div class="kpi-icon green"><svg class="icon lg"><use href="#i-cloud"/></svg></div>
+    <div><strong>Ligar por API</strong><span>O próprio sistema envia as faturas para o Gateway, com uma chave de API segura.</span></div>
+    <svg class="icon go"><use href="#i-arrow"/></svg>
+  </a>
+</div>
+{% endif %}
+
+<div class="conn-cards">
+{% for s in sources %}
+  <section class="card conn-card">
+    <div class="top">
+      <div class="kpi-icon {% if s.kind == 'API' %}green{% else %}blue{% endif %}"><svg class="icon lg"><use href="#i-{% if s.kind == 'API' %}cloud{% else %}db{% endif %}"/></svg></div>
+      <div style="min-width:0;flex:1">
+        <a class="title" href="{% url 'dashboard:connection' s.pk %}">{{ s.name }}</a>
+        <div class="meta">{{ s.code }}{% if s.system %} · {{ s.system }}{% endif %}</div>
+        <div class="meta path" title="{{ s.connection_summary }}">{% if s.kind == "API" %}Recebe por API{% else %}{{ s.connection_summary }}{% endif %}</div>
+      </div>
+      {% if not s.active %}<span class="pill">inativa</span>
+      {% elif s.kind == "API" %}<span class="pill ok">pronta</span>
+      {% elif not s.mapping %}<span class="pill warn">por configurar</span>
+      {% elif s.last_sync_status == "OK" %}<span class="pill ok">OK</span>
+      {% elif s.last_sync_status == "ERROR" %}<span class="pill bad">erro</span>
+      {% elif s.last_sync_status %}<span class="pill warn">parcial</span>
+      {% else %}<span class="pill info">pronta</span>{% endif %}
+    </div>
+    <div class="stats">
+      <div><b>{{ s.n_invoices }}</b><span>documentos</span></div>
+      <div>{% if s.kind == "API" %}<b>{{ s.api_keys.count }}</b><span>chaves de API</span>{% else %}<b>{% if s.last_sync_at %}{{ s.last_sync_at|date:"d/m H:i" }}{% else %}—{% endif %}</b><span>última leitura</span>{% endif %}</div>
+    </div>
+    <div class="foot">
+      <a class="btn sm" href="{% url 'dashboard:connection' s.pk %}">Abrir</a>
+      {% if s.kind == "DATABASE" and can_operate %}
+        <form class="inline" method="post" action="{% url 'dashboard:connection_test' s.pk %}">{% csrf_token %}<input type="hidden" name="next" value="{% url 'dashboard:connections' %}"><button class="btn sm" type="submit"><svg class="icon sm"><use href="#i-bolt"/></svg>Testar</button></form>
+        {% if s.mapping and s.active %}<form class="inline" method="post" action="{% url 'dashboard:connection_sync' s.pk %}">{% csrf_token %}<button class="btn sm" type="submit"><svg class="icon sm"><use href="#i-refresh"/></svg>Sincronizar</button></form>{% endif %}
+      {% endif %}
+    </div>
+  </section>
+{% empty %}
+  <section class="card"><div class="card-body empty">Ainda não há ligações.{% if can_admin %} Escolha acima como ligar o primeiro sistema.{% endif %}</div></section>
+{% endfor %}
+</div>
+{% endblock %}

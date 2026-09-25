@@ -1,17 +1,24 @@
 {% extends "dashboard/base.html" %}
 {% block title %}Faturas{% endblock %}
 {% block content %}
-<h1>Faturas{% if group_label %} · {{ group_label }}{% endif %}</h1>
-<form class="filters" method="get">
-  <label>Pesquisa<input type="search" name="q" value="{{ q }}" placeholder="Número, cliente, NIF, ID"></label>
-  <label>Grupo<select name="grupo"><option value="">Todos</option>{% for k, v in groups.items %}<option value="{{ k }}" {% if k == group %}selected{% endif %}>{{ v }}</option>{% endfor %}</select></label>
-  <label>Estado<select name="estado"><option value="">Todos</option>{% for k, v in statuses %}<option value="{{ k }}" {% if k == status %}selected{% endif %}>{{ v }}</option>{% endfor %}</select></label>
-  <label>Origem<select name="origem"><option value="">Todas</option>{% for s in sources %}<option value="{{ s.code }}" {% if s.code == source %}selected{% endif %}>{{ s.code }}</option>{% endfor %}</select></label>
-  <label>De<input type="date" name="de" value="{{ date_from }}"></label>
-  <label>Até<input type="date" name="ate" value="{{ date_to }}"></label>
-  <button class="btn primary" type="submit">Filtrar</button>
-  <a class="btn" href="{% url 'dashboard:invoices' %}">Limpar</a>
-</form>
-{% include "dashboard/_invoice_rows.html" with invoices=page.object_list %}
-{% include "dashboard/_pagination.html" %}
+<div class="page-head">
+  <div>
+    <div class="crumbs"><a href="{% url 'dashboard:home' %}">Início</a> › Faturas</div>
+    <h1>Faturas{% if group_label %} · {{ group_label }}{% endif %}</h1>
+    <div class="sub">Documentos recebidos de todas as ligações desta empresa.</div>
+  </div>
+</div>
+<section class="card">
+  <form class="filters" method="get">
+    <label class="f grow">Pesquisa<input type="search" name="q" value="{{ q }}" placeholder="Número, cliente, NIF ou ID de origem"></label>
+    <label class="f">Grupo<select name="grupo"><option value="">Todos</option>{% for k, v in groups.items %}<option value="{{ k }}" {% if k == group %}selected{% endif %}>{{ v }}</option>{% endfor %}</select></label>
+    <label class="f">Estado<select name="estado"><option value="">Todos</option>{% for k, v in statuses %}<option value="{{ k }}" {% if k == status %}selected{% endif %}>{{ v }}</option>{% endfor %}</select></label>
+    <label class="f">Ligação<select name="origem"><option value="">Todas</option>{% for s in sources %}<option value="{{ s.code }}" {% if s.code == source %}selected{% endif %}>{{ s.code }}</option>{% endfor %}</select></label>
+    <label class="f">De<input type="date" name="de" value="{{ date_from }}"></label>
+    <label class="f">Até<input type="date" name="ate" value="{{ date_to }}"></label>
+    <div class="actions"><button class="btn primary" type="submit"><svg class="icon sm"><use href="#i-search"/></svg>Filtrar</button><a class="btn ghost" href="{% url 'dashboard:invoices' %}">Limpar</a></div>
+  </form>
+  {% include "dashboard/_invoice_rows.html" with invoices=page.object_list %}
+  {% include "dashboard/_pagination.html" %}
+</section>
 {% endblock %}

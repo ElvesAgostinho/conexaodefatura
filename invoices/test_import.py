@@ -146,7 +146,7 @@ class ImportTests(TestCase):
     def setUp(self):
         self.company = Company.objects.create(name="Hotel", nif="5000000000")
         self.host = DataSource.objects.create(company=self.company, code="HOST", name="HOST", kind="DATABASE",
-                                              connection="default")
+                                              connection_mode="ENV", connection="default")
         self.api = DataSource.objects.create(company=self.company, code="API", name="API", kind="API")
 
     def test_create_valid(self):
@@ -228,7 +228,7 @@ class ImportTests(TestCase):
     def test_other_company_same_numbers_ok(self):
         other = Company.objects.create(name="Outro", nif="5000000001")
         other_source = DataSource.objects.create(company=other, code="HOST", name="H", kind="DATABASE",
-                                                 connection="default")
+                                                 connection_mode="ENV", connection="default")
         import_document(self.host, document())
         import_document(other_source, document())
         self.assertEqual(Invoice.objects.count(), 2)
@@ -276,7 +276,7 @@ class ConcurrentImportTests(TransactionTestCase):
                           "corre em PostgreSQL/SQL Server/MySQL/Oracle.")
         company = Company.objects.create(name="Hotel", nif="5000000000")
         source = DataSource.objects.create(company=company, code="HOST", name="HOST", kind="DATABASE",
-                                           connection="default")
+                                           connection_mode="ENV", connection="default")
         outcomes, errors = [], []
 
         def worker():

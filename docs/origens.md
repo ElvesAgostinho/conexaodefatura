@@ -10,24 +10,30 @@ Todas as origens passam pelo mesmo importador: formato canónico
 
 ## Tipo API: o sistema envia
 
-1. Criar uma origem do tipo **API**.
-2. Em *Chaves de API*, criar uma chave ligada a essa origem (é mostrada uma única vez).
+1. Em *Ligações*, escolher **Ligar por API**.
+2. Na página da ligação, criar uma chave (é mostrada uma única vez) e copiar o endereço e os exemplos.
 3. O sistema envia os documentos para `POST /api/v1/documents/`. Ver [api.md](api.md).
 
 ## Tipo base de dados: o Gateway lê
 
 O Gateway liga-se **só em leitura** à BD do sistema, de qualquer SGBD (SQL Server,
 PostgreSQL, MySQL/MariaDB, Oracle, SQLite, ou outro com dialeto SQLAlchemy via URL).
+Tudo se faz no painel, em *Ligações*:
 
-1. No `.env`, definir a ligação: `HOST_DB_*` (ligação `default`) ou `HOST_<NOME>_DB_*`.
-   As credenciais nunca ficam na base de dados do Gateway.
-2. Criar a origem do tipo **base de dados** com essa ligação e usar *Testar ligação*.
-3. Estudar a BD real (`host_inspect`, `host_sample --company NIF --source CODIGO`).
-4. Preencher o **mapeamento**. Só então aparece o botão *Sincronizar*.
-5. Agendar `python manage.py sync_sources` (Agendador de Tarefas do Windows ou cron).
+1. **Ligar base de dados**: escolher o sistema (SQL Server, ...), servidor, porta, base
+   de dados, utilizador e senha. A senha fica **cifrada** na base do Gateway e nunca é
+   mostrada. Usar *Testar ligação* antes de guardar. Alternativa: guardar as credenciais
+   no `.env` (`HOST_DB_*` ou `HOST_<NOME>_DB_*`) e escolher "Variáveis do ficheiro .env".
+2. **Explorar estrutura**: ver tabelas, colunas e algumas linhas reais.
+3. **Assistente de mapeamento**: escolher a tabela dos documentos e a das linhas e, em
+   listas com as colunas reais, indicar onde está cada campo. As consultas SQL são
+   geradas automaticamente (nomes validados contra a estrutura real e citados pelo
+   próprio SGBD). *Pré-visualizar* mostra os 3 primeiros documentos sem importar nada.
+4. **Sincronizar agora**, e agendar `python manage.py sync_sources` (Agendador de
+   Tarefas do Windows ou cron).
 
 Nada está pré-configurado para nenhum sistema. O mapeamento do HOST é feito na Fase 6,
-a partir da estrutura real.
+a partir da estrutura real. Para casos especiais há o editor de mapeamento em JSON.
 
 ### Mapeamento
 

@@ -1,44 +1,52 @@
 {% extends "dashboard/base.html" %}
 {% block title %}Chaves de API{% endblock %}
 {% block content %}
-<h1>Chaves de API</h1>
-<p class="muted">Cada sistema externo (ERP, POS, ...) envia os seus documentos para <code>{{ api_url }}</code> com o cabeçalho
-<code>Authorization: Api-Key &lt;chave&gt;</code>. Uma chave só vê os documentos da sua origem.</p>
+<div class="page-head">
+  <div>
+    <div class="crumbs"><a href="{% url 'dashboard:home' %}">Início</a> › Chaves de API</div>
+    <h1>Chaves de API</h1>
+    <div class="sub">Todas as chaves desta empresa. Cada chave pertence a uma ligação e só vê os documentos dessa ligação.</div>
+  </div>
+  <a class="btn primary" href="{% url 'dashboard:connection_new' 'api' %}"><svg class="icon sm"><use href="#i-plus"/></svg>Nova ligação API</a>
+</div>
 
 {% if new_key %}
-<div class="panel" style="border-color:var(--ok)">
-  <strong>Chave criada. Copie-a agora: não voltará a ser mostrada.</strong>
-  <div class="secret-key" style="margin-top:.5rem">{{ new_key }}</div>
-</div>
+<div class="alert success"><svg class="icon"><use href="#i-key"/></svg><div style="flex:1"><strong>Chave criada. Copie-a agora — não voltará a ser mostrada.</strong><div class="secret-key" style="margin-top:.6rem">{{ new_key }}</div></div></div>
 {% endif %}
 
-<div class="panel">
-  <h2 style="margin-top:0">Nova chave</h2>
-  {% if has_api_source %}
-  <form method="post">
-    {% csrf_token %}
-    <div class="grid2">
-      <div>{% include "dashboard/_field.html" with field=form.name %}</div>
-      <div>{% include "dashboard/_field.html" with field=form.source %}</div>
+<div class="grid g-main">
+  <section class="card">
+    <div class="card-head"><h2>Chaves</h2><span class="hint">{{ keys|length }}</span></div>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Nome</th><th>Ligação</th><th>Criada</th><th>Último uso</th><th>Estado</th><th></th></tr></thead>
+      <tbody>
+      {% for k in keys %}
+        <tr>
+          <td><strong>{{ k.name }}</strong><span class="sub mono">gw_{{ k.prefix }}_…</span></td>
+          <td><a href="{% url 'dashboard:connection' k.source.pk %}">{{ k.source.name }}</a></td>
+          <td>{{ k.created_at|date:"d/m/Y H:i" }}</td><td>{{ k.last_used_at|date:"d/m/Y H:i"|default:"—" }}</td>
+          <td>{% if k.active %}<span class="pill ok">ativa</span>{% else %}<span class="pill bad">revogada</span>{% endif %}</td>
+          <td class="num">{% if k.active %}<form class="inline" method="post" action="{% url 'dashboard:api_key_revoke' k.pk %}" onsubmit="return confirm('Revogar esta chave? O sistema que a usa deixa de conseguir enviar documentos.')">{% csrf_token %}<button class="btn sm danger" type="submit">Revogar</button></form>{% endif %}</td>
+        </tr>
+      {% empty %}<tr><td colspan="6" class="empty">Sem chaves.</td></tr>{% endfor %}
+      </tbody>
+    </table></div>
+  </section>
+  <section class="card">
+    <div class="card-head"><h2>Nova chave</h2></div>
+    <div class="card-body">
+    {% if has_api_source %}
+      <form method="post">
+        {% csrf_token %}
+        {% include "dashboard/_field.html" with field=form.name %}
+        {% include "dashboard/_field.html" with field=form.source %}
+        <button class="btn primary" type="submit"><svg class="icon sm"><use href="#i-key"/></svg>Criar chave</button>
+      </form>
+    {% else %}
+      <p>Crie primeiro uma <a href="{% url 'dashboard:connection_new' 'api' %}">ligação por API</a>.</p>
+    {% endif %}
+      <p class="help" style="margin-top:1rem">Endereço para os sistemas: <span class="mono">{{ api_url }}</span></p>
     </div>
-    <button class="btn primary" type="submit">Criar chave</button>
-  </form>
-  {% else %}
-  <p>Crie primeiro uma <a href="{% url 'dashboard:source_new' %}">origem do tipo API</a>.</p>
-  {% endif %}
+  </section>
 </div>
-
-<div class="table-wrap"><table>
-  <thead><tr><th>Nome</th><th>Origem</th><th>Prefixo</th><th>Criada</th><th>Último uso</th><th>Estado</th><th></th></tr></thead>
-  <tbody>
-  {% for k in keys %}
-    <tr>
-      <td>{{ k.name }}</td><td class="mono">{{ k.source.code }}</td><td class="mono">gw_{{ k.prefix }}_…</td>
-      <td>{{ k.created_at|date:"d/m/Y H:i" }}</td><td>{{ k.last_used_at|date:"d/m/Y H:i"|default:"—" }}</td>
-      <td>{% if k.active %}<span class="badge b-ok">ativa</span>{% else %}<span class="badge b-bad">revogada</span>{% endif %}</td>
-      <td>{% if k.active %}<form class="inline" method="post" action="{% url 'dashboard:api_key_revoke' k.pk %}" onsubmit="return confirm('Revogar esta chave? O sistema que a usa deixa de conseguir enviar documentos.')">{% csrf_token %}<button class="btn small danger" type="submit">Revogar</button></form>{% endif %}</td>
-    </tr>
-  {% empty %}<tr><td colspan="7" class="empty">Sem chaves.</td></tr>{% endfor %}
-  </tbody>
-</table></div>
 {% endblock %}

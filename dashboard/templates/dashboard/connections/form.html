@@ -1,0 +1,95 @@
+{% extends "dashboard/base.html" %}
+{% block title %}{% if source %}Editar {{ source.code }}{% else %}Nova ligação{% endif %}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <div class="crumbs"><a href="{% url 'dashboard:home' %}">Início</a> › <a href="{% url 'dashboard:connections' %}">Ligações</a> › {% if source %}{{ source.code }}{% else %}Nova{% endif %}</div>
+    <h1>{% if source %}Editar ligação {{ source.code }}{% elif is_database %}Ligar base de dados{% else %}Ligar por API{% endif %}</h1>
+    <div class="sub">{% if is_database %}O Gateway só lê: use um utilizador da base de dados com permissão apenas de leitura.{% else %}O sistema externo envia as faturas; a seguir cria-se a chave de API.{% endif %}</div>
+  </div>
+</div>
+
+{% if test_result %}
+  <div class="alert {% if test_result.ok %}success{% else %}error{% endif %}"><svg class="icon"><use href="#i-{% if test_result.ok %}check{% else %}alert{% endif %}"/></svg>
+    <div>{% if test_result.ok %}<strong>Ligação OK</strong> — {{ test_result.elapsed_ms }} ms{% if test_result.server_version %}, servidor {{ test_result.server_version }}{% endif %}. Pode guardar.
+      {% if test_result.measures %}<div class="help" style="color:inherit">Proteções ativas: {{ test_result.measures|join:"; " }}</div>{% endif %}
+    {% else %}<strong>Falha na ligação:</strong> {{ test_result.message }}{% endif %}</div></div>
+{% endif %}
+
+<form method="post" class="card" autocomplete="off">
+  {% csrf_token %}
+  {% if form.non_field_errors %}<div class="card-body"><ul class="errors">{% for e in form.non_field_errors %}<li>{{ e }}</li>{% endfor %}</ul></div>{% endif %}
+  <div class="card-body">
+    <div class="form-grid">
+      <div class="section-title">Identificação</div>
+      {% include "dashboard/_field.html" with field=form.name %}
+      {% include "dashboard/_field.html" with field=form.code %}
+      {% include "dashboard/_field.html" with field=form.system %}
+      {% include "dashboard/_field.html" with field=form.active %}
+
+      {% if is_database %}
+      <div class="section-title" style="margin-top:.75rem">Ligação à base de dados</div>
+      {% include "dashboard/_field.html" with field=form.connection_mode full=True %}
+
+      <div class="field full" id="panel-fields" style="margin:0">
+        <div class="form-grid">
+          {% include "dashboard/_field.html" with field=form.db_engine %}
+          <div></div>
+          <div class="db-std" style="display:contents">
+            {% include "dashboard/_field.html" with field=form.db_host %}
+            {% include "dashboard/_field.html" with field=form.db_port %}
+          </div>
+          {% include "dashboard/_field.html" with field=form.db_name field_id="f-name" %}
+          <div class="db-std" style="display:contents">
+            {% include "dashboard/_field.html" with field=form.db_user %}
+            {% include "dashboard/_field.html" with field=form.db_password %}
+            <div class="field">{% if source.has_db_password %}{% include "dashboard/_field.html" with field=form.clear_password %}{% endif %}</div>
+          </div>
+          <div class="db-url field full" style="margin:0">{% include "dashboard/_field.html" with field=form.db_url full=True %}</div>
+          <div class="db-mssql" style="display:contents">
+            {% include "dashboard/_field.html" with field=form.db_odbc_driver %}
+            {% include "dashboard/_field.html" with field=form.db_trust_server_certificate %}
+          </div>
+          <div class="db-std" style="display:contents">{% include "dashboard/_field.html" with field=form.db_options full=True %}</div>
+        </div>
+      </div>
+      <div class="field full" id="env-fields" style="margin:0">
+        {% include "dashboard/_field.html" with field=form.connection %}
+        <div class="help">Para quem prefere guardar as credenciais no ficheiro .env do servidor (variáveis HOST_DB_* ou HOST_&lt;NOME&gt;_DB_*).</div>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+  <div class="form-foot">
+    <a class="btn ghost" href="{% if source %}{% url 'dashboard:connection' source.pk %}{% else %}{% url 'dashboard:connections' %}{% endif %}">Cancelar</a>
+    {% if is_database %}<button class="btn" type="submit" name="action" value="test"><svg class="icon sm"><use href="#i-bolt"/></svg>Testar ligação</button>{% endif %}
+    <button class="btn primary" type="submit" name="action" value="save"><svg class="icon sm"><use href="#i-check"/></svg>Guardar</button>
+  </div>
+</form>
+{% endblock %}
+
+{% block scripts %}
+{% if is_database %}
+<script>
+(function () {
+  // Mostra só os campos que fazem sentido para o modo e o sistema escolhidos.
+  var form = document.querySelector("form.card");
+  function show(sel, on, display) {
+    form.querySelectorAll(sel).forEach(function (el) { el.style.display = on ? display : "none"; });
+  }
+  function refresh() {
+    var mode = (form.querySelector("input[name=connection_mode]:checked") || {}).value;
+    var engine = form.querySelector("select[name=db_engine]").value;
+    document.getElementById("panel-fields").style.display = mode === "PANEL" ? "" : "none";
+    document.getElementById("env-fields").style.display = mode === "ENV" ? "" : "none";
+    show(".db-std", engine !== "url" && engine !== "sqlite", "contents");
+    show(".db-url", engine === "url", "");
+    show(".db-mssql", engine === "mssql", "contents");
+    document.getElementById("f-name").style.display = engine === "url" ? "none" : "";
+  }
+  form.addEventListener("change", refresh);
+  refresh();
+})();
+</script>
+{% endif %}
+{% endblock %}

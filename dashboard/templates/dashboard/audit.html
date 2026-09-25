@@ -1,31 +1,39 @@
 {% extends "dashboard/base.html" %}
 {% block title %}Auditoria{% endblock %}
 {% block content %}
-<h1>Auditoria</h1>
-<div class="tabs">
-  <a href="?tab=eventos" class="{% if tab == 'eventos' %}active{% endif %}">Ações de utilizadores e sistemas</a>
-  <a href="?tab=integracao" class="{% if tab == 'integracao' %}active{% endif %}">Comunicação (origens e AGT)</a>
+<div class="page-head">
+  <div>
+    <div class="crumbs"><a href="{% url 'dashboard:home' %}">Início</a> › Auditoria</div>
+    <h1>Auditoria</h1>
+    <div class="sub">Registo de todas as ações e comunicações. Não pode ser alterado nem apagado.</div>
+  </div>
 </div>
-<div class="table-wrap"><table>
-  {% if tab == "eventos" %}
-  <thead><tr><th>Data</th><th>Autor</th><th>Ação</th><th>Objeto</th><th>Detalhes</th><th>IP</th></tr></thead>
-  <tbody>
-  {% for e in page.object_list %}
-    <tr><td style="white-space:nowrap">{{ e.timestamp|date:"d/m/Y H:i:s" }}</td><td>{{ e.actor }}</td><td class="mono">{{ e.action }}</td>
-      <td>{{ e.object_type }} {{ e.object_id }}</td><td class="mono muted">{{ e.details|truncatechars:200 }}</td><td class="mono">{{ e.ip_address|default:"" }}</td></tr>
-  {% empty %}<tr><td colspan="6" class="empty">Sem eventos.</td></tr>{% endfor %}
-  </tbody>
-  {% else %}
-  <thead><tr><th>Data</th><th>Ação</th><th>Documento</th><th>Estado</th><th>Detalhe</th></tr></thead>
-  <tbody>
-  {% for l in page.object_list %}
-    <tr><td style="white-space:nowrap">{{ l.timestamp|date:"d/m/Y H:i:s" }}</td><td class="mono">{{ l.action }}</td>
-      <td>{% if l.invoice %}<a href="{% url 'dashboard:invoice' l.invoice.pk %}">{{ l.invoice.document_number }}</a>{% endif %}</td>
-      <td>{{ l.status }}{% if l.simulated %} <span class="badge">simulação</span>{% endif %}</td>
-      <td>{% if l.error_message %}<span style="color:var(--bad)">{{ l.error_message|truncatechars:250 }}</span>{% else %}<span class="muted">{{ l.response_body|truncatechars:200 }}</span>{% endif %}</td></tr>
-  {% empty %}<tr><td colspan="5" class="empty">Sem registos.</td></tr>{% endfor %}
-  </tbody>
-  {% endif %}
-</table></div>
-{% with querystring="tab="|add:tab %}{% include "dashboard/_pagination.html" %}{% endwith %}
+<section class="card">
+  <div class="tabs">
+    <a href="?tab=eventos" class="{% if tab == 'eventos' %}active{% endif %}">Ações de utilizadores e sistemas</a>
+    <a href="?tab=integracao" class="{% if tab == 'integracao' %}active{% endif %}">Comunicação (ligações e AGT)</a>
+  </div>
+  <div class="table-wrap"><table>
+    {% if tab == "eventos" %}
+    <thead><tr><th>Data</th><th>Autor</th><th>Ação</th><th>Objeto</th><th>Detalhes</th><th>IP</th></tr></thead>
+    <tbody>
+    {% for e in page.object_list %}
+      <tr><td style="white-space:nowrap">{{ e.timestamp|date:"d/m/Y H:i:s" }}</td><td>{{ e.actor }}</td><td><span class="pill plain mono">{{ e.action }}</span></td>
+        <td>{{ e.object_type }} {{ e.object_id }}</td><td class="mono sub" style="display:table-cell">{{ e.details|truncatechars:160 }}</td><td class="mono">{{ e.ip_address|default:"" }}</td></tr>
+    {% empty %}<tr><td colspan="6" class="empty">Sem eventos.</td></tr>{% endfor %}
+    </tbody>
+    {% else %}
+    <thead><tr><th>Data</th><th>Ação</th><th>Documento</th><th>Estado</th><th>Detalhe</th></tr></thead>
+    <tbody>
+    {% for l in page.object_list %}
+      <tr><td style="white-space:nowrap">{{ l.timestamp|date:"d/m/Y H:i:s" }}</td><td><span class="pill plain mono">{{ l.action }}</span></td>
+        <td>{% if l.invoice %}<a href="{% url 'dashboard:invoice' l.invoice.pk %}">{{ l.invoice.document_number }}</a>{% endif %}</td>
+        <td>{{ l.status }}{% if l.simulated %} <span class="pill plain">simulação</span>{% endif %}</td>
+        <td>{% if l.error_message %}<span style="color:var(--bad)">{{ l.error_message|truncatechars:220 }}</span>{% else %}<span class="sub">{{ l.response_body|truncatechars:180 }}</span>{% endif %}</td></tr>
+    {% empty %}<tr><td colspan="5" class="empty">Sem registos.</td></tr>{% endfor %}
+    </tbody>
+    {% endif %}
+  </table></div>
+  {% with querystring="tab="|add:tab %}{% include "dashboard/_pagination.html" %}{% endwith %}
+</section>
 {% endblock %}

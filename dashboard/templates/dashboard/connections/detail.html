@@ -1,0 +1,127 @@
+{% extends "dashboard/base.html" %}
+{% block title %}{{ source.name }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <div class="crumbs"><a href="{% url 'dashboard:home' %}">Início</a> › <a href="{% url 'dashboard:connections' %}">Ligações</a> › {{ source.code }}</div>
+    <h1>{{ source.name }} {% if not source.active %}<span class="pill" style="vertical-align:middle">inativa</span>{% endif %}</h1>
+    <div class="sub">{{ source.get_kind_display }}{% if source.system %} · {{ source.system }}{% endif %} · código <span class="mono">{{ source.code }}</span></div>
+  </div>
+  <div class="actions">
+    {% if can_admin %}<a class="btn" href="{% url 'dashboard:connection_edit' source.pk %}"><svg class="icon sm"><use href="#i-edit"/></svg>Editar</a>{% endif %}
+    {% if source.kind == "DATABASE" and can_operate %}
+      <form class="inline" method="post" action="{% url 'dashboard:connection_test' source.pk %}">{% csrf_token %}<button class="btn" type="submit"><svg class="icon sm"><use href="#i-bolt"/></svg>Testar ligação</button></form>
+      {% if source.mapping and source.active and not mapping_problems %}<form class="inline" method="post" action="{% url 'dashboard:connection_sync' source.pk %}">{% csrf_token %}<button class="btn primary" type="submit"><svg class="icon sm"><use href="#i-refresh"/></svg>Sincronizar agora</button></form>{% endif %}
+    {% endif %}
+  </div>
+</div>
+
+{% if source.kind == "DATABASE" %}
+<div class="grid g-main">
+  <section class="card">
+    <div class="card-head"><h2>Configuração passo a passo</h2></div>
+    <div class="card-body">
+      <ol class="steps">
+        <li><span class="step-dot {% if source.connection_mode == 'ENV' and source.connection or source.db_engine %}done{% else %}todo{% endif %}">1</span>
+          <div class="step-body"><strong>Ligação à base de dados</strong><span>{{ source.connection_summary }}</span></div>
+          {% if can_admin %}<a class="btn sm" href="{% url 'dashboard:connection_edit' source.pk %}">Configurar</a>{% endif %}</li>
+        <li><span class="step-dot">2</span>
+          <div class="step-body"><strong>Explorar a estrutura</strong><span>Ver as tabelas, colunas e algumas linhas reais para saber onde estão as faturas.</span></div>
+          {% if can_operate %}<a class="btn sm" href="{% url 'dashboard:connection_explore' source.pk %}"><svg class="icon sm"><use href="#i-table"/></svg>Explorar</a>{% endif %}</li>
+        <li><span class="step-dot {% if source.mapping and not mapping_problems %}done{% else %}todo{% endif %}">3</span>
+          <div class="step-body"><strong>Mapeamento</strong><span>{% if source.mapping and not mapping_problems %}Configurado: {{ mapped_fields }} campos do cabeçalho ligados a colunas.{% elif mapping_problems %}Mapeamento com problemas: {{ mapping_problems|first }}{% else %}Indicar em que tabelas e colunas estão os documentos e as linhas.{% endif %}</span></div>
+          {% if can_admin %}<a class="btn sm {% if not source.mapping %}primary{% endif %}" href="{% url 'dashboard:connection_mapping' source.pk %}"><svg class="icon sm"><use href="#i-map"/></svg>Assistente</a>{% endif %}</li>
+        <li><span class="step-dot {% if source.last_sync_status == 'OK' %}done{% elif source.last_sync_status %}todo{% endif %}">4</span>
+          <div class="step-body"><strong>Sincronização</strong><span>{% if source.last_sync_at %}{{ source.last_sync_at|date:"d/m/Y H:i" }} — {{ source.last_sync_message }}{% else %}Ainda não sincronizada. Depois de mapear, use "Sincronizar agora" ou agende o comando sync_sources.{% endif %}</span></div></li>
+      </ol>
+    </div>
+  </section>
+  <section class="card">
+    <div class="card-head"><h2>Resumo</h2></div>
+    <div class="card-body"><dl class="kv">
+      <dt>Sistema</dt><dd>{{ source.get_db_engine_display|default:"—" }}</dd>
+      {% if source.connection_mode == "ENV" %}<dt>Configuração</dt><dd>.env · <span class="mono">{{ source.connection }}</span></dd>
+      {% else %}
+      {% if source.db_engine == "url" %}
+      <dt>URL</dt><dd>{% if source.db_url_encrypted %}<span class="pill ok"><svg class="icon sm"><use href="#i-lock"/></svg>guardado cifrado</span>{% else %}—{% endif %}</dd>
+      {% elif source.db_engine == "sqlite" %}
+      <dt>Ficheiro</dt><dd class="mono">{{ source.db_name }}</dd>
+      {% else %}
+      <dt>Servidor</dt><dd>{{ source.db_host|default:"—" }}{% if source.db_port %}:{{ source.db_port }}{% endif %}</dd>
+      <dt>Base de dados</dt><dd>{{ source.db_name|default:"—" }}</dd>
+      <dt>Utilizador</dt><dd>{% if source.db_user %}{{ source.db_user }}{% elif source.db_engine == "mssql" %}(autenticação Windows){% else %}—{% endif %}</dd>
+      <dt>Senha</dt><dd>{% if source.has_db_password %}<span class="pill ok"><svg class="icon sm"><use href="#i-lock"/></svg>guardada cifrada</span>{% else %}—{% endif %}</dd>
+      {% endif %}
+      {% endif %}
+      <dt>Documentos</dt><dd>{{ n_invoices }}</dd>
+      <dt>Cursor</dt><dd class="mono">{{ source.sync_cursor|default:"início" }}</dd>
+    </dl>
+    {% if can_admin and source.mapping %}<p class="help" style="margin-top:1rem"><a href="{% url 'dashboard:connection_mapping_json' source.pk %}">Editar o mapeamento em JSON (avançado)</a></p>{% endif %}
+    </div>
+  </section>
+</div>
+
+{% else %}
+{% if new_key %}
+<div class="alert success"><svg class="icon"><use href="#i-key"/></svg><div style="flex:1"><strong>Chave criada. Copie-a agora — não voltará a ser mostrada.</strong>
+  <div class="copy-row" style="margin-top:.6rem"><code id="new-key">{{ new_key }}</code><button class="btn sm" type="button" data-copy="new-key"><svg class="icon sm"><use href="#i-copy"/></svg>Copiar</button></div></div></div>
+{% endif %}
+<div class="grid g-main">
+  <section class="card">
+    <div class="card-head"><h2>Como o sistema se liga</h2></div>
+    <div class="card-body">
+      <p>O sistema <strong>{{ source.name }}</strong> envia cada fatura com um pedido <span class="mono">POST</span> em JSON:</p>
+      <div class="label">Endereço</div>
+      <div class="copy-row" style="margin-bottom:1rem"><code id="endpoint">{{ endpoint }}</code><button class="btn sm" type="button" data-copy="endpoint"><svg class="icon sm"><use href="#i-copy"/></svg>Copiar</button></div>
+      <div class="label">Cabeçalho de autenticação</div>
+      <div class="copy-row" style="margin-bottom:1rem"><code>Authorization: Api-Key &lt;chave criada ao lado&gt;</code></div>
+      <div class="label">Exemplo (curl)</div>
+      <pre id="ex-curl">curl -X POST "{{ endpoint }}" \
+  -H "Authorization: Api-Key &lt;CHAVE&gt;" \
+  -H "Content-Type: application/json" \
+  -d @fatura.json</pre>
+      <div class="label" style="margin-top:1rem">Exemplo (PowerShell)</div>
+      <pre>Invoke-RestMethod -Method Post -Uri "{{ endpoint }}" `
+  -Headers @{ Authorization = "Api-Key &lt;CHAVE&gt;" } `
+  -ContentType "application/json" -InFile fatura.json</pre>
+      <details class="tableview" style="margin-top:1rem"><summary>Ver exemplo de fatura em JSON</summary><pre style="margin-top:.5rem">{{ example_json }}</pre></details>
+      <p class="help" style="margin-top:1rem">Respostas: 201 criado · 200 já existia (pode repetir o envio em segurança) · 400 dados inválidos · 409 conflito. Teste a chave com <span class="mono">GET {{ ping }}</span>. Documentação completa em docs/api.md.</p>
+    </div>
+  </section>
+  <section class="card">
+    <div class="card-head"><h2>Chaves de API</h2><span class="hint">{{ keys|length }}</span></div>
+    {% if can_admin %}
+    <form method="post" action="{% url 'dashboard:connection_create_key' source.pk %}" class="card-body" style="border-bottom:1px solid var(--line)">
+      {% csrf_token %}{{ key_form.source }}
+      <div class="field" style="margin-bottom:.6rem"><label for="id_name">Nova chave</label>{{ key_form.name }}</div>
+      <button class="btn primary sm" type="submit" {% if not source.active %}disabled{% endif %}><svg class="icon sm"><use href="#i-plus"/></svg>Criar chave</button>
+    </form>
+    {% endif %}
+    <div class="table-wrap"><table><tbody>
+      {% for k in keys %}
+      <tr><td><strong>{{ k.name }}</strong><span class="sub mono">gw_{{ k.prefix }}_… · {% if k.last_used_at %}usada {{ k.last_used_at|date:"d/m H:i" }}{% else %}nunca usada{% endif %}</span></td>
+        <td class="num">{% if k.active %}<span class="pill ok">ativa</span>{% if can_admin %}
+          <form class="inline" method="post" action="{% url 'dashboard:api_key_revoke' k.pk %}" onsubmit="return confirm('Revogar esta chave? O sistema que a usa deixa de conseguir enviar faturas.')">{% csrf_token %}<button class="btn sm danger" type="submit">Revogar</button></form>{% endif %}
+          {% else %}<span class="pill bad">revogada</span>{% endif %}</td></tr>
+      {% empty %}<tr><td class="empty">Ainda sem chaves.{% if can_admin %} Crie uma acima.{% endif %}</td></tr>{% endfor %}
+    </tbody></table></div>
+  </section>
+</div>
+{% endif %}
+
+<section class="card mt">
+  <div class="card-head"><h2>Últimos documentos desta ligação</h2><a class="btn sm ghost" href="{% url 'dashboard:invoices' %}?origem={{ source.code }}">Ver todos <svg class="icon sm"><use href="#i-arrow"/></svg></a></div>
+  {% include "dashboard/_invoice_rows.html" with invoices=recent compact=True %}
+</section>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.querySelectorAll("[data-copy]").forEach(function (btn) {
+  btn.addEventListener("click", function () {
+    var text = document.getElementById(btn.dataset.copy).textContent.trim();
+    if (navigator.clipboard) navigator.clipboard.writeText(text).then(function () { btn.lastChild.textContent = "Copiado"; });
+  });
+});
+</script>
+{% endblock %}

@@ -31,7 +31,7 @@ from invoices.canonical import HEADER_FIELDS, LINE_FIELDS, REQUIRED_HEADER_FIELD
 
 CURSOR_TYPES = ("int", "str", "datetime")
 MAX_BATCH = 1000
-_KEYS = {"documents_query", "lines_query", "cursor_column", "cursor_type", "initial_cursor", "batch_size",
+_KEYS = {"documents_query", "lines_query", "cursor_column", "cursor_type", "initial_cursor", "batch_size", "assistant",
          "fields", "line_fields", "defaults", "line_defaults"}
 
 

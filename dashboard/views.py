@@ -7,6 +7,7 @@ from django.core.paginator import Paginator
 from django.db.models import Count, Q, Sum
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.utils import timezone
 from django.views.decorators.http import require_POST
 
 from agt.models import AgtConfiguration
@@ -18,10 +19,10 @@ from companies.models import ApiKey
 from invoices.models import STATUS_GROUPS, Invoice, InvoiceStatus
 from invoices.services import DocumentConflict, revalidate
 from sources.models import DataSource
-from sources.sync import SyncError, database_for, sync_source
 
-from .access import SESSION_KEY, can, company_view
-from .forms import AgtConfigurationForm, ApiKeyForm, DataSourceForm
+from .charts import daily_documents, status_distribution
+from .access import SESSION_KEY, can, company_view, safe_next
+from .forms import AgtConfigurationForm, ApiKeyForm
 
 GROUP_LABELS = {"pendentes": "Pendentes", "enviadas": "Enviadas", "rejeitadas": "Rejeitadas", "erros": "Erros"}
 PAGE_SIZE = 50
@@ -40,11 +41,15 @@ def select_company(request):
     company = companies_for_user(request.user).filter(pk=request.POST.get("company")).first()
     if company is not None:
         request.session[SESSION_KEY] = company.pk
-    next_url = request.POST.get("next") or ""
-    return redirect(next_url if next_url.startswith("/") and not next_url.startswith("//") else "dashboard:home")
+    return redirect(safe_next(request, reverse("dashboard:home")))
 
 
 # ------------------------------------------------------------------- início
+
+
+def _greeting() -> str:
+    hour = timezone.localtime().hour
+    return "Bom dia" if hour < 12 else "Boa tarde" if hour < 19 else "Boa noite"
 
 
 @company_view()
@@ -59,10 +64,13 @@ def home(request):
     config = AgtConfiguration.for_company(company)
     return render(request, "dashboard/home.html", {
         "groups": groups,
+        "daily": daily_documents(invoices),
+        "distribution": status_distribution(counts),
+        "greeting": _greeting(),
         "total": invoices.count(),
         "confirmed_amount": invoices.filter(status=InvoiceStatus.CONFIRMED).aggregate(s=Sum("total"))["s"],
         "recent": invoices.select_related("source")[:10],
-        "sources": company.sources.all(),
+        "sources": company.sources.annotate(n_invoices=Count("invoices")),
         "agt": config,
         "agt_missing": [] if config.is_simulation else config.missing_for_real_sending(),
         "queued": counts.get(InvoiceStatus.QUEUED, 0),
@@ -165,67 +173,6 @@ def invoice_action(request, pk, action):
     else:
         messages.warning(request, "O estado do documento mudou entretanto; nada foi feito.")
     return redirect("dashboard:invoice", pk=pk)
-
-
-# ------------------------------------------------------------------ origens
-
-
-@company_view()
-def source_list(request):
-    sources = request.company.sources.annotate(n_invoices=Count("invoices"))
-    return render(request, "dashboard/source_list.html", {
-        "sources": sources,
-        "can_operate": can(request, Role.OPERATOR),
-        "can_admin": can(request, Role.ADMIN),
-    })
-
-
-@company_view(Role.ADMIN)
-def source_form(request, pk=None):
-    instance = get_object_or_404(DataSource, pk=pk, company=request.company) if pk else None
-    form = DataSourceForm(request.POST or None, instance=instance, company=request.company)
-    if request.method == "POST" and form.is_valid():
-        source = form.save()
-        audit_event("SOURCE_UPDATED" if instance else "SOURCE_CREATED", request=request, company=request.company,
-                    obj=source, details={"code": source.code, "kind": source.kind, "changed": form.changed_data})
-        messages.success(request, f"Origem {source.code} guardada.")
-        return redirect("dashboard:sources")
-    return render(request, "dashboard/source_form.html", {"form": form, "source": instance})
-
-
-@require_POST
-@company_view(Role.OPERATOR)
-def source_sync(request, pk):
-    source = get_object_or_404(DataSource, pk=pk, company=request.company)
-    try:
-        result = sync_source(source)
-    except SyncError as exc:
-        messages.error(request, f"{source.code}: {exc}")
-    else:
-        level = messages.success if not (result.stop_reason or result.conflicts) else messages.warning
-        level(request, f"{source.code}: {result.summary()}")
-    audit_event("SOURCE_SYNC", request=request, company=request.company, obj=source)
-    return redirect("dashboard:sources")
-
-
-@require_POST
-@company_view(Role.OPERATOR)
-def source_test(request, pk):
-    source = get_object_or_404(DataSource, pk=pk, company=request.company, kind=DataSource.Kind.DATABASE)
-    try:
-        db = database_for(source)
-    except Exception as exc:  # noqa: BLE001 - configuração em falta/inválida
-        messages.error(request, f"{source.code}: {exc}")
-        return redirect("dashboard:sources")
-    try:
-        result = db.test_connection()
-    finally:
-        db.dispose()
-    if result.ok:
-        messages.success(request, f"{source.code}: ligação OK ({result.elapsed_ms} ms, servidor {result.server_version or '?'}).")
-    else:
-        messages.error(request, f"{source.code}: {result.message}")
-    return redirect("dashboard:sources")
 
 
 # ---------------------------------------------------------------------- AGT

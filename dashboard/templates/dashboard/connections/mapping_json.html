@@ -1,0 +1,17 @@
+{% extends "dashboard/base.html" %}
+{% block title %}Mapeamento JSON · {{ source.code }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <div class="crumbs"><a href="{% url 'dashboard:connections' %}">Ligações</a> › <a href="{% url 'dashboard:connection' source.pk %}">{{ source.code }}</a> › Mapeamento (JSON)</div>
+    <h1>Mapeamento avançado</h1>
+    <div class="sub">Para ajustes finos. As consultas continuam a ser verificadas: só leitura, com :cursor e :document_id.</div>
+  </div>
+  <div class="actions"><a class="btn" href="{% url 'dashboard:connection_mapping' source.pk %}"><svg class="icon sm"><use href="#i-map"/></svg>Voltar ao assistente</a></div>
+</div>
+<form method="post" class="card">
+  {% csrf_token %}
+  <div class="card-body">{% include "dashboard/_field.html" with field=form.mapping full=True %}</div>
+  <div class="form-foot"><a class="btn ghost" href="{% url 'dashboard:connection' source.pk %}">Cancelar</a><button class="btn primary" type="submit">Guardar</button></div>
+</form>
+{% endblock %}

@@ -1,48 +1,68 @@
 {% extends "dashboard/base.html" %}
 {% block title %}Configuração AGT{% endblock %}
 {% block content %}
-<h1>Configuração AGT</h1>
+<div class="page-head">
+  <div>
+    <div class="crumbs"><a href="{% url 'dashboard:home' %}">Início</a> › Configuração AGT</div>
+    <h1>Configuração AGT</h1>
+    <div class="sub">Comunicação com a Administração Geral Tributária para {{ nav_company.name }}.</div>
+  </div>
+</div>
+
 {% if config.is_simulation %}
-  <div class="banner">Modo <strong>simulação</strong>: os documentos são marcados como aceites sem nada ser enviado à AGT.</div>
+  <div class="alert warning"><svg class="icon"><use href="#i-info"/></svg><div>Modo <strong>simulação</strong>: os documentos são tratados como aceites, sem nada ser enviado à AGT.</div></div>
 {% else %}
-  <div class="banner bad">A comunicação real com a AGT só funciona depois de implementada a especificação técnica oficial.
-  {% if missing %}Falta ainda: {{ missing|join:", " }}.{% endif %}</div>
+  <div class="alert error"><svg class="icon"><use href="#i-alert"/></svg><div>A comunicação real com a AGT só funciona depois de implementada a especificação técnica oficial.{% if missing %} Falta ainda: {{ missing|join:", " }}.{% endif %}</div></div>
 {% endif %}
 
 <form method="post">
   {% csrf_token %}
-  <div class="grid2">
-    <div class="panel">
-      <h2 style="margin-top:0">Ligação</h2>
-      {% include "dashboard/_field.html" with field=form.environment %}
-      {% include "dashboard/_field.html" with field=form.base_url %}
-      {% include "dashboard/_field.html" with field=form.client_id %}
-      {% include "dashboard/_field.html" with field=form.credentials_prefix %}
-    </div>
-    <div class="panel">
-      <h2 style="margin-top:0">Software certificado</h2>
-      {% include "dashboard/_field.html" with field=form.software_certificate_number %}
-      {% include "dashboard/_field.html" with field=form.software_name %}
-      {% include "dashboard/_field.html" with field=form.software_version %}
-    </div>
-    <div class="panel">
-      <h2 style="margin-top:0">Envio</h2>
-      {% include "dashboard/_field.html" with field=form.auto_send %}
-      {% include "dashboard/_field.html" with field=form.timeout_seconds %}
-      {% include "dashboard/_field.html" with field=form.max_attempts %}
-      {% include "dashboard/_field.html" with field=form.retry_delay_seconds %}
-    </div>
-    <div class="panel">
-      <h2 style="margin-top:0">Credenciais (ficheiro .env)</h2>
-      <p class="muted">Os segredos nunca são guardados na base de dados nem mostrados no painel. Só se indica se estão definidos no servidor.</p>
-      <table>
+  <div class="grid g-2">
+    <section class="card">
+      <div class="card-head"><h2>Ambiente e ligação</h2></div>
+      <div class="card-body">
+        {% include "dashboard/_field.html" with field=form.environment %}
+        {% include "dashboard/_field.html" with field=form.base_url %}
+        {% include "dashboard/_field.html" with field=form.client_id %}
+        {% include "dashboard/_field.html" with field=form.credentials_prefix %}
+      </div>
+    </section>
+    <section class="card">
+      <div class="card-head"><h2>Software certificado</h2></div>
+      <div class="card-body">
+        {% include "dashboard/_field.html" with field=form.software_certificate_number %}
+        {% include "dashboard/_field.html" with field=form.software_name %}
+        {% include "dashboard/_field.html" with field=form.software_version %}
+      </div>
+    </section>
+    <section class="card">
+      <div class="card-head"><h2>Envio</h2></div>
+      <div class="card-body">
+        {% include "dashboard/_field.html" with field=form.auto_send %}
+        <div class="form-grid">
+          {% include "dashboard/_field.html" with field=form.timeout_seconds %}
+          {% include "dashboard/_field.html" with field=form.max_attempts %}
+        </div>
+        {% include "dashboard/_field.html" with field=form.retry_delay_seconds %}
+      </div>
+    </section>
+    <section class="card">
+      <div class="card-head"><h2>Credenciais</h2><span class="hint">ficheiro .env do servidor</span></div>
+      <div class="card-body">
+        <p class="help" style="margin-top:0">Os segredos da AGT nunca são guardados na base de dados nem mostrados aqui. Indica-se apenas se estão definidos no servidor.</p>
+      </div>
+      <table><tbody>
         {% for name, ok in secrets.items %}
-        <tr><td class="mono">{{ name }}</td><td>{% if ok %}<span class="badge b-ok">definida</span>{% else %}<span class="badge b-warn">em falta</span>{% endif %}</td></tr>
+        <tr><td class="mono">{{ name }}</td><td class="num">{% if ok %}<span class="pill ok">definida</span>{% else %}<span class="pill warn">em falta</span>{% endif %}</td></tr>
         {% endfor %}
-      </table>
+      </tbody></table>
+    </section>
+  </div>
+  <div class="card mt">
+    <div class="form-foot" style="border-top:0;border-radius:var(--radius)">
+      {% if config.updated_by %}<span class="help" style="margin-right:auto">Última alteração: {{ config.updated_at|date:"d/m/Y H:i" }} por {{ config.updated_by }}.</span>{% endif %}
+      {% if editable %}<button class="btn primary" type="submit"><svg class="icon sm"><use href="#i-check"/></svg>Guardar</button>{% else %}<span class="help">Só administradores podem alterar esta configuração.</span>{% endif %}
     </div>
   </div>
-  {% if editable %}<button class="btn primary" type="submit">Guardar</button>{% else %}<p class="muted">Só administradores podem alterar esta configuração.</p>{% endif %}
-  {% if config.updated_by %}<p class="muted">Última alteração: {{ config.updated_at|date:"d/m/Y H:i" }} por {{ config.updated_by }}.</p>{% endif %}
 </form>
 {% endblock %}

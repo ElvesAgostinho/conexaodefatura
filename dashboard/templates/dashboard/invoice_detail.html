@@ -1,71 +1,83 @@
 {% extends "dashboard/base.html" %}
 {% block title %}{{ invoice.document_number }}{% endblock %}
 {% block content %}
-<div class="header-row">
-  <h1>{{ invoice.document_number }} <span class="badge st-{{ invoice.status }}">{{ invoice.get_status_display }}</span>{% if invoice.simulated %} <span class="badge">simulação</span>{% endif %}</h1>
+<div class="page-head">
+  <div>
+    <div class="crumbs"><a href="{% url 'dashboard:home' %}">Início</a> › <a href="{% url 'dashboard:invoices' %}">Faturas</a> › {{ invoice.document_number }}</div>
+    <h1>{{ invoice.document_number }} <span class="pill st-{{ invoice.status }}" style="vertical-align:middle">{{ invoice.get_status_display }}</span>{% if invoice.simulated %} <span class="pill plain" style="vertical-align:middle">simulação</span>{% endif %}</h1>
+    <div class="sub">{{ invoice.customer_name }} · {{ invoice.document_date|date:"d/m/Y" }} · ligação {{ invoice.source_system }}</div>
+  </div>
   <div class="actions">
-    {% if can_revalidate %}<form class="inline" method="post" action="{% url 'dashboard:invoice_action' invoice.pk 'revalidar' %}">{% csrf_token %}<button class="btn" type="submit">Revalidar</button></form>{% endif %}
-    {% if can_send %}<form class="inline" method="post" action="{% url 'dashboard:invoice_action' invoice.pk 'enviar' %}">{% csrf_token %}<button class="btn primary" type="submit">Enviar à AGT</button></form>{% endif %}
-    {% if can_resend %}<form class="inline" method="post" action="{% url 'dashboard:invoice_action' invoice.pk 'reenviar' %}" onsubmit="return confirm('Reenviar este documento à AGT?')">{% csrf_token %}<button class="btn primary" type="submit">Reenviar</button></form>{% endif %}
+    {% if can_revalidate %}<form class="inline" method="post" action="{% url 'dashboard:invoice_action' invoice.pk 'revalidar' %}">{% csrf_token %}<button class="btn" type="submit"><svg class="icon sm"><use href="#i-refresh"/></svg>Revalidar</button></form>{% endif %}
+    {% if can_send %}<form class="inline" method="post" action="{% url 'dashboard:invoice_action' invoice.pk 'enviar' %}">{% csrf_token %}<button class="btn primary" type="submit"><svg class="icon sm"><use href="#i-send"/></svg>Enviar à AGT</button></form>{% endif %}
+    {% if can_resend %}<form class="inline" method="post" action="{% url 'dashboard:invoice_action' invoice.pk 'reenviar' %}" onsubmit="return confirm('Reenviar este documento à AGT?')">{% csrf_token %}<button class="btn primary" type="submit"><svg class="icon sm"><use href="#i-send"/></svg>Reenviar</button></form>{% endif %}
     {% if is_stuck %}<form class="inline" method="post" action="{% url 'dashboard:invoice_action' invoice.pk 'desbloquear' %}" onsubmit="return confirm('O envio anterior foi interrompido e pode ter chegado à AGT. Confirmou no portal da AGT que não chegou?')">{% csrf_token %}<button class="btn danger" type="submit">Devolver à fila</button></form>{% endif %}
   </div>
 </div>
 
 {% if invoice.validation_errors %}
-<div class="panel" style="border-color:var(--bad)">
-  <strong>Erros de validação</strong> <span class="muted">(corrigir na origem; a próxima importação atualiza o documento)</span>
-  <ul class="errors">{% for e in invoice.validation_errors %}<li>{{ e }}</li>{% endfor %}</ul>
-</div>
+<div class="alert error"><svg class="icon"><use href="#i-alert"/></svg><div><strong>Erros de validação</strong> — corrija no sistema de origem; a próxima leitura atualiza o documento.
+  <ul class="plain" style="margin-top:.35rem">{% for e in invoice.validation_errors %}<li>{{ e }}</li>{% endfor %}</ul></div></div>
 {% endif %}
-{% if invoice.last_error %}<div class="banner bad">{{ invoice.last_error }}</div>{% endif %}
+{% if invoice.last_error %}<div class="alert error"><svg class="icon"><use href="#i-alert"/></svg><div>{{ invoice.last_error }}</div></div>{% endif %}
 
-<div class="grid2">
-  <div class="panel">
-    <dl class="kv">
+<div class="kpis" style="grid-template-columns:repeat(3,minmax(0,1fr))">
+  <div class="card kpi"><div class="kpi-icon gray"><svg class="icon lg"><use href="#i-doc"/></svg></div><div><div class="kpi-value">{{ invoice.subtotal|floatformat:2 }}</div><div class="kpi-label">Subtotal ({{ invoice.currency }})</div></div></div>
+  <div class="card kpi"><div class="kpi-icon amber"><svg class="icon lg"><use href="#i-list"/></svg></div><div><div class="kpi-value">{{ invoice.tax_amount|floatformat:2 }}</div><div class="kpi-label">Imposto ({{ invoice.currency }})</div></div></div>
+  <div class="card kpi"><div class="kpi-icon blue"><svg class="icon lg"><use href="#i-check"/></svg></div><div><div class="kpi-value">{{ invoice.total|floatformat:2 }}</div><div class="kpi-label">Total ({{ invoice.currency }})</div></div></div>
+</div>
+
+<div class="grid g-2">
+  <section class="card">
+    <div class="card-head"><h2>Documento</h2></div>
+    <div class="card-body"><dl class="kv">
       <dt>Tipo / série</dt><dd>{{ invoice.document_type }} · {{ invoice.series }}</dd>
       <dt>Data</dt><dd>{{ invoice.document_date|date:"d/m/Y" }}</dd>
       <dt>Cliente</dt><dd>{{ invoice.customer_name }}</dd>
       <dt>NIF do cliente</dt><dd>{{ invoice.customer_nif|default:"—" }}</dd>
-      <dt>Subtotal</dt><dd>{{ invoice.subtotal|floatformat:2 }} {{ invoice.currency }}</dd>
-      <dt>Imposto</dt><dd>{{ invoice.tax_amount|floatformat:2 }} {{ invoice.currency }}</dd>
-      <dt>Total</dt><dd><strong>{{ invoice.total|floatformat:2 }} {{ invoice.currency }}</strong></dd>
-    </dl>
-  </div>
-  <div class="panel">
-    <dl class="kv">
-      <dt>Origem</dt><dd><span class="mono">{{ invoice.source_system }}</span>{% if invoice.source %} · {{ invoice.source.name }}{% endif %}</dd>
-      <dt>ID original</dt><dd class="mono">{{ invoice.source_document_id }}</dd>
-      <dt>Importado</dt><dd>{{ invoice.created_at|date:"d/m/Y H:i" }}</dd>
-      <dt>Request ID AGT</dt><dd class="mono">{{ invoice.agt_request_id|default:"—" }}</dd>
-      <dt>Mensagem AGT</dt><dd>{{ invoice.agt_message|default:"—" }}</dd>
+      <dt>Ligação</dt><dd>{% if invoice.source %}<a href="{% url 'dashboard:connection' invoice.source.pk %}">{{ invoice.source.name }}</a>{% endif %} <span class="pill plain">{{ invoice.source_system }}</span></dd>
+      <dt>ID na origem</dt><dd class="mono">{{ invoice.source_document_id }}</dd>
+      <dt>Recebido</dt><dd>{{ invoice.created_at|date:"d/m/Y H:i" }}</dd>
+    </dl></div>
+  </section>
+  <section class="card">
+    <div class="card-head"><h2>Comunicação AGT</h2></div>
+    <div class="card-body"><dl class="kv">
+      <dt>Estado</dt><dd><span class="pill st-{{ invoice.status }}">{{ invoice.get_status_display }}</span></dd>
+      <dt>Request ID</dt><dd class="mono">{{ invoice.agt_request_id|default:"—" }}</dd>
+      <dt>Mensagem</dt><dd>{{ invoice.agt_message|default:"—" }}</dd>
       <dt>Tentativas</dt><dd>{{ invoice.send_attempts }}{% if invoice.next_attempt_at and invoice.status == "QUEUED" %} · próxima {{ invoice.next_attempt_at|date:"d/m/Y H:i" }}{% endif %}</dd>
       <dt>Enviado</dt><dd>{{ invoice.sent_at|date:"d/m/Y H:i"|default:"—" }}</dd>
-      <dt>Validado AGT</dt><dd>{{ invoice.confirmed_at|date:"d/m/Y H:i"|default:"—" }}</dd>
-    </dl>
-  </div>
+      <dt>Validado pela AGT</dt><dd>{{ invoice.confirmed_at|date:"d/m/Y H:i"|default:"—" }}</dd>
+    </dl></div>
+  </section>
 </div>
 
-<h2>Linhas</h2>
-<div class="table-wrap"><table>
-  <thead><tr><th>#</th><th>Código</th><th>Descrição</th><th class="num">Qtd.</th><th class="num">Preço</th><th class="num">Desconto</th><th class="num">Taxa</th><th class="num">Imposto</th><th class="num">Total</th></tr></thead>
-  <tbody>
-  {% for i in items %}
-    <tr><td>{{ i.line_number }}</td><td class="mono">{{ i.product_code }}</td><td>{{ i.description }}{% if i.tax_exemption_code %} <span class="badge">isenção {{ i.tax_exemption_code }}</span>{% endif %}</td>
-      <td class="num">{{ i.quantity|floatformat:"-4" }}</td><td class="num">{{ i.unit_price|floatformat:"-4" }}</td><td class="num">{{ i.discount|floatformat:2 }}</td>
-      <td class="num">{{ i.tax_rate|floatformat:"-2" }}%</td><td class="num">{{ i.tax_amount|floatformat:2 }}</td><td class="num">{{ i.total|floatformat:2 }}</td></tr>
-  {% endfor %}
-  </tbody>
-</table></div>
+<section class="card mt">
+  <div class="card-head"><h2>Linhas</h2><span class="hint">{{ items|length }} linha(s)</span></div>
+  <div class="table-wrap"><table>
+    <thead><tr><th>#</th><th>Artigo</th><th>Descrição</th><th class="num">Qtd.</th><th class="num">Preço</th><th class="num">Desconto</th><th class="num">Taxa</th><th class="num">Imposto</th><th class="num">Total</th></tr></thead>
+    <tbody>
+    {% for i in items %}
+      <tr><td>{{ i.line_number }}</td><td class="mono">{{ i.product_code|default:"—" }}</td><td>{{ i.description }}{% if i.tax_exemption_code %} <span class="pill plain">isenção {{ i.tax_exemption_code }}</span>{% endif %}</td>
+        <td class="num">{{ i.quantity|floatformat:"-4" }}</td><td class="num">{{ i.unit_price|floatformat:"-4" }}</td><td class="num">{{ i.discount|floatformat:2 }}</td>
+        <td class="num">{{ i.tax_rate|floatformat:"-2" }}%</td><td class="num">{{ i.tax_amount|floatformat:2 }}</td><td class="num"><strong>{{ i.total|floatformat:2 }}</strong></td></tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+</section>
 
-<h2>Histórico de integração</h2>
-<div class="table-wrap"><table>
-  <thead><tr><th>Data</th><th>Ação</th><th>Estado</th><th>Detalhe</th></tr></thead>
-  <tbody>
-  {% for log in logs %}
-    <tr><td style="white-space:nowrap">{{ log.timestamp|date:"d/m/Y H:i:s" }}</td><td class="mono">{{ log.action }}</td>
-      <td>{{ log.status }}{% if log.response_code %} ({{ log.response_code }}){% endif %}{% if log.simulated %} <span class="badge">simulação</span>{% endif %}</td>
-      <td>{% if log.error_message %}<span style="color:var(--bad)">{{ log.error_message|truncatechars:300 }}</span>{% else %}<span class="muted">{{ log.response_body|truncatechars:200 }}</span>{% endif %}</td></tr>
-  {% empty %}<tr><td colspan="4" class="empty">Sem registos.</td></tr>{% endfor %}
-  </tbody>
-</table></div>
+<section class="card mt">
+  <div class="card-head"><h2>Histórico</h2></div>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Data</th><th>Ação</th><th>Estado</th><th>Detalhe</th></tr></thead>
+    <tbody>
+    {% for log in logs %}
+      <tr><td style="white-space:nowrap">{{ log.timestamp|date:"d/m/Y H:i:s" }}</td><td class="mono">{{ log.action }}</td>
+        <td>{{ log.status }}{% if log.response_code %} ({{ log.response_code }}){% endif %}{% if log.simulated %} <span class="pill plain">simulação</span>{% endif %}</td>
+        <td>{% if log.error_message %}<span style="color:var(--bad)">{{ log.error_message|truncatechars:300 }}</span>{% else %}<span class="sub">{{ log.response_body|truncatechars:200 }}</span>{% endif %}</td></tr>
+    {% empty %}<tr><td colspan="4" class="empty">Sem registos.</td></tr>{% endfor %}
+    </tbody>
+  </table></div>
+</section>
 {% endblock %}

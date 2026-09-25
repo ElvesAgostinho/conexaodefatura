@@ -8,7 +8,7 @@ class HostCommand(BaseCommand):
     """Base dos comandos que usam uma ligação de leitura a uma BD de origem.
 
     --connection NOME   usa as variáveis HOST_NOME_DB_* do .env
-    --company NIF       usa a origem do tipo base de dados da empresa
+    --company NIF       usa a ligação (painel ou .env) da origem do tipo base de dados da empresa
                         (--source CODIGO quando a empresa tem mais de uma)
     Sem nenhum, usa HOST_DB_*.
     """
@@ -29,15 +29,15 @@ class HostCommand(BaseCommand):
         connection, company_nif, source_code = getattr(self, "_host_target", (None, None, None))
         if source_code and not company_nif:
             raise CommandError("--source exige --company.")
-        if company_nif:
-            connection = self._company_connection(company_nif, source_code)
         try:
+            if company_nif:
+                return self._company_source(company_nif, source_code).connection_config()
             return HostConnectionConfig.from_env(connection or DEFAULT_CONNECTION)
         except HostConfigError as exc:
             raise CommandError(f"Configuração da ligação inválida: {exc}") from exc
 
     @staticmethod
-    def _company_connection(company_nif: str, source_code: str | None) -> str:
+    def _company_source(company_nif: str, source_code: str | None):
         from companies.models import Company
         from sources.models import DataSource
 
@@ -54,7 +54,7 @@ class HostCommand(BaseCommand):
         if len(sources) > 1:
             codes = ", ".join(s.code for s in sources)
             raise CommandError(f"A empresa tem várias origens de base de dados ({codes}): indique --source.")
-        return sources[0].connection
+        return sources[0]
 
     def get_host_database(self) -> HostDatabase:
         return HostDatabase(self.get_host_config())

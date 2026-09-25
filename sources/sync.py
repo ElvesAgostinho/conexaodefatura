@@ -14,7 +14,7 @@ from dataclasses import dataclass, field
 from django.utils import timezone
 
 from audit.services import log_integration
-from host_connector.config import HostConfigError, HostConnectionConfig
+from host_connector.config import HostConfigError
 from host_connector.connection import HostDatabase
 from invoices.canonical import CanonicalError
 from invoices.services import DocumentConflict, import_document
@@ -56,7 +56,7 @@ class SyncResult:
 
 
 def database_for(source: DataSource) -> HostDatabase:
-    return HostDatabase(HostConnectionConfig.from_env(source.connection))
+    return HostDatabase(source.connection_config())
 
 
 def sync_source(source: DataSource, *, db: HostDatabase | None = None) -> SyncResult:

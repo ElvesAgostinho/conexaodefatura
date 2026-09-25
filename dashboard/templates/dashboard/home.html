@@ -1,53 +1,120 @@
 {% extends "dashboard/base.html" %}
+{% load l10n %}
 {% block title %}Início{% endblock %}
 {% block content %}
-<div class="header-row">
-  <h1>{{ nav_company.name }} <span class="muted" style="font-weight:400;font-size:1rem">NIF {{ nav_company.nif }}</span></h1>
-  {% if can_operate and queued %}
-  <form method="post" action="{% url 'dashboard:run_queue' %}">{% csrf_token %}<button class="btn primary" type="submit">Processar fila agora ({{ queued }})</button></form>
-  {% endif %}
+<div class="page-head">
+  <div>
+    <h1>{{ greeting }}, {{ user.first_name|default:user.get_username }}</h1>
+    <div class="sub">{{ nav_company.name }} · NIF {{ nav_company.nif }}</div>
+  </div>
+  <div class="actions">
+    {% if can_operate and queued %}
+    <form class="inline" method="post" action="{% url 'dashboard:run_queue' %}">{% csrf_token %}
+      <button class="btn primary" type="submit"><svg class="icon sm"><use href="#i-send"/></svg>Processar fila ({{ queued }})</button>
+    </form>
+    {% endif %}
+    <a class="btn" href="{% url 'dashboard:connections' %}"><svg class="icon sm"><use href="#i-plug"/></svg>Ligações</a>
+  </div>
 </div>
 
 {% if agt.is_simulation %}
-  <div class="banner">Modo <strong>simulação</strong>: nenhum documento é enviado à AGT. <a href="{% url 'dashboard:agt' %}">Configuração AGT</a></div>
+  <div class="alert warning"><svg class="icon"><use href="#i-info"/></svg><div>Modo <strong>simulação</strong>: os documentos são tratados como aceites, mas nada é enviado à AGT. <a href="{% url 'dashboard:agt' %}">Configuração AGT</a></div></div>
 {% elif agt_missing %}
-  <div class="banner bad">Configuração AGT incompleta: falta {{ agt_missing|join:", " }}.</div>
+  <div class="alert error"><svg class="icon"><use href="#i-alert"/></svg><div>Configuração AGT incompleta: falta {{ agt_missing|join:", " }}.</div></div>
 {% endif %}
 {% if stuck %}
-  <div class="banner bad">{{ stuck }} documento(s) presos em "A enviar" (envio interrompido). <a href="{% url 'dashboard:invoices' %}?estado=SENDING">Ver</a></div>
+  <div class="alert error"><svg class="icon"><use href="#i-alert"/></svg><div>{{ stuck }} documento(s) com envio interrompido precisam de decisão. <a href="{% url 'dashboard:invoices' %}?estado=SENDING">Ver documentos</a></div></div>
 {% endif %}
 
-<div class="cards">
-  <a class="card" href="{% url 'dashboard:invoices' %}"><div class="n">{{ total }}</div><div class="l">Documentos</div></a>
+<div class="kpis">
+  <a class="card kpi" href="{% url 'dashboard:invoices' %}"><div class="kpi-icon gray"><svg class="icon lg"><use href="#i-doc"/></svg></div><div><div class="kpi-value">{{ total }}</div><div class="kpi-label">Documentos</div></div></a>
   {% for g in groups %}
-  <a class="card" href="{% url 'dashboard:invoices' %}?grupo={{ g.key }}"><div class="n">{{ g.count }}</div><div class="l">{{ g.label }}</div></a>
+  <a class="card kpi" href="{% url 'dashboard:invoices' %}?grupo={{ g.key }}">
+    <div class="kpi-icon {% if g.key == 'enviadas' %}green{% elif g.key == 'pendentes' %}blue{% elif g.key == 'rejeitadas' %}amber{% else %}red{% endif %}">
+      <svg class="icon lg"><use href="#i-{% if g.key == 'enviadas' %}check{% elif g.key == 'pendentes' %}clock{% elif g.key == 'rejeitadas' %}x{% else %}alert{% endif %}"/></svg>
+    </div>
+    <div><div class="kpi-value">{{ g.count }}</div><div class="kpi-label">{{ g.label }}</div></div>
+  </a>
   {% endfor %}
 </div>
 
-<div class="grid2">
-  <div>
-    <h2>Últimos documentos</h2>
-    {% include "dashboard/_invoice_rows.html" with invoices=recent %}
-  </div>
-  <div>
-    <h2>Origens</h2>
-    <div class="table-wrap"><table>
-      <thead><tr><th>Origem</th><th>Tipo</th><th>Última sincronização</th></tr></thead>
-      <tbody>
+<div class="grid g-main">
+  <section class="card">
+    <div class="card-head"><h2>Documentos por dia</h2><span class="hint">Últimos {{ daily.days }} dias · {{ daily.total }} documento(s)</span></div>
+    <div class="card-body">
+      {% localize off %}{# coordenadas SVG têm de usar ponto decimal #}
+      <svg class="chart" viewBox="0 0 {{ daily.width }} {{ daily.height }}" role="img" aria-label="Documentos por data do documento nos últimos {{ daily.days }} dias">
+        {% for t in daily.ticks %}
+          <line class="grid-line" x1="{{ daily.left }}" x2="{{ daily.right }}" y1="{{ t.y }}" y2="{{ t.y }}"/>
+          <text class="axis-text" x="{{ daily.left|add:'-8' }}" y="{{ t.y }}" text-anchor="end" dominant-baseline="middle">{{ t.value }}</text>
+        {% endfor %}
+        {% for b in daily.bars %}
+          <g class="col">
+            <title>{{ b.date|date:"d/m/Y" }}: {{ b.count }} documento(s)</title>
+            <rect class="hit" x="{{ b.slot_x }}" y="0" width="{{ b.slot_w }}" height="{{ daily.baseline }}"/>
+            {% if b.d %}<path class="bar" d="{{ b.d }}"/>{% endif %}
+            {% if b.show_label %}<text class="axis-text" x="{{ b.cx }}" y="{{ daily.label_y }}" text-anchor="middle">{{ b.label }}</text>{% endif %}
+            <g class="tip" transform="translate({{ b.cx }},{{ b.tip_y }})">
+              <rect x="-44" y="0" width="88" height="22" rx="6"/>
+              <text x="0" y="15" text-anchor="middle">{{ b.label }} · {{ b.count }}</text>
+            </g>
+          </g>
+        {% endfor %}
+      </svg>{% endlocalize %}
+      <details class="tableview"><summary>Ver como tabela</summary>
+        <table><thead><tr><th>Data</th><th class="num">Documentos</th></tr></thead><tbody>
+        {% for b in daily.bars %}<tr><td>{{ b.date|date:"d/m/Y" }}</td><td class="num">{{ b.count }}</td></tr>{% endfor %}
+        </tbody></table>
+      </details>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="card-head"><h2>Estado dos documentos</h2><span class="hint">{{ distribution.total }} no total</span></div>
+    <div class="card-body">
+      {% if distribution.total %}
+      <div class="statusbar" role="img" aria-label="Distribuição dos documentos por estado">
+        {% for s in distribution.segments %}{% if s.count %}<span class="sw {{ s.css }}" style="flex: {{ s.count }}" title="{{ s.label }}: {{ s.count }}"></span>{% endif %}{% endfor %}
+      </div>
+      {% endif %}
+      <ul class="legend">
+        {% for s in distribution.segments %}
+        <li><span class="sw {{ s.css }}"></span><a href="{% url 'dashboard:invoices' %}?grupo={{ s.key }}">{{ s.label }}</a><span class="v">{{ s.count }}</span><span class="p">{{ s.pct }}%</span></li>
+        {% endfor %}
+      </ul>
+      {% if confirmed_amount %}<p class="help" style="margin-top:1rem">Total validado pela AGT: <strong>{{ confirmed_amount|floatformat:2 }}</strong></p>{% endif %}
+    </div>
+  </section>
+</div>
+
+<div class="grid g-main mt">
+  <section class="card">
+    <div class="card-head"><h2>Últimos documentos</h2><a class="btn sm ghost" href="{% url 'dashboard:invoices' %}">Ver todos <svg class="icon sm"><use href="#i-arrow"/></svg></a></div>
+    <div class="card-body flush">{% include "dashboard/_invoice_rows.html" with invoices=recent compact=True %}</div>
+  </section>
+  <section class="card">
+    <div class="card-head"><h2>Ligações</h2><a class="btn sm ghost" href="{% url 'dashboard:connections' %}">Gerir <svg class="icon sm"><use href="#i-arrow"/></svg></a></div>
+    <div class="card-body flush">
+      <div class="table-wrap"><table><tbody>
       {% for s in sources %}
         <tr>
-          <td><span class="mono">{{ s.code }}</span> {{ s.name }}{% if not s.active %} <span class="badge">inativa</span>{% endif %}</td>
-          <td>{{ s.get_kind_display }}</td>
-          <td>{% if s.kind == "DATABASE" %}
-              {% if s.last_sync_at %}{{ s.last_sync_at|date:"d/m/Y H:i" }} <span class="badge {% if s.last_sync_status == 'OK' %}b-ok{% elif s.last_sync_status == 'ERROR' %}b-bad{% else %}b-warn{% endif %}">{{ s.get_last_sync_status_display }}</span>{% else %}<span class="muted">nunca</span>{% endif %}
-              {% else %}<span class="muted">recebe pela API</span>{% endif %}</td>
+          <td style="width:44px"><div class="kpi-icon {% if s.kind == 'API' %}blue{% else %}gray{% endif %}" style="width:34px;height:34px;border-radius:9px"><svg class="icon sm"><use href="#i-{% if s.kind == 'API' %}cloud{% else %}db{% endif %}"/></svg></div></td>
+          <td><a class="row-link" href="{% url 'dashboard:connection' s.pk %}">{{ s.name }}</a><span class="sub">{{ s.code }} · {{ s.n_invoices }} doc.</span></td>
+          <td class="num">
+            {% if not s.active %}<span class="pill">inativa</span>
+            {% elif s.kind == "API" %}<span class="pill info">API</span>
+            {% elif not s.mapping %}<span class="pill warn">por configurar</span>
+            {% elif s.last_sync_status == "OK" %}<span class="pill ok">OK</span>
+            {% elif s.last_sync_status == "ERROR" %}<span class="pill bad">erro</span>
+            {% elif s.last_sync_status %}<span class="pill warn">parcial</span>
+            {% else %}<span class="pill">nunca sincronizada</span>{% endif %}
+          </td>
         </tr>
       {% empty %}
-        <tr><td colspan="3" class="empty">Nenhuma origem configurada. <a href="{% url 'dashboard:sources' %}">Configurar</a></td></tr>
+        <tr><td class="empty">Ainda não há ligações. <a href="{% url 'dashboard:connections' %}">Ligar um sistema</a></td></tr>
       {% endfor %}
-      </tbody>
-    </table></div>
-    {% if confirmed_amount %}<p class="muted">Total validado pela AGT: <strong>{{ confirmed_amount|floatformat:2 }}</strong></p>{% endif %}
-  </div>
+      </tbody></table></div>
+    </div>
+  </section>
 </div>
 {% endblock %}

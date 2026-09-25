@@ -44,7 +44,9 @@ Administrador, Operador, Consulta). No painel, configurar as origens, a AGT e as
   (modo simulação, configuração AGT incompleta, envios interrompidos).
 - **Faturas**: pesquisa e filtros; detalhe com linhas, erros de validação, resposta AGT e
   histórico. Operador: enviar, reenviar rejeitadas/erros, revalidar.
-- **Origens**: criar e editar (administrador), testar a ligação e sincronizar (operador).
+- **Ligações**: *Ligar base de dados* (SGBD, servidor, utilizador e senha cifrada, com
+  *Testar ligação*), *Explorar estrutura*, *Assistente de mapeamento* com pré-visualização,
+  *Sincronizar*; ou *Ligar por API* (endereço, exemplos curl/PowerShell e chaves).
 - **Configuração AGT**: ambiente, endereço, software certificado, envio automático,
   tentativas. Os segredos ficam no `.env`; o painel só mostra se estão definidos.
 - **Chaves de API** e **Auditoria**: só administradores.

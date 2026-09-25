@@ -1,10 +1,8 @@
-import json
 import os
 from unittest import mock
 
 from django.contrib.auth import get_user_model
 from django.test import TestCase
-from django.urls import reverse
 
 from agt.models import AgtConfiguration
 from audit.models import AuditEvent
@@ -13,7 +11,6 @@ from invoices.models import Invoice, InvoiceStatus
 from invoices.services import import_document
 from invoices.testing import document, numbered
 from sources.models import DataSource
-from sources.tests import MAPPING
 
 User = get_user_model()
 Role = Membership.Role
@@ -42,12 +39,12 @@ class DashboardTestCase(TestCase):
 
 
 class AccessTests(DashboardTestCase):
-    PAGES = ["dashboard:home", "dashboard:invoices", "dashboard:sources", "dashboard:agt"]
-    ADMIN_PAGES = ["dashboard:api_keys", "dashboard:audit", "dashboard:source_new"]
+    PAGES = ["/", "/faturas/", "/ligacoes/", "/agt/"]
+    ADMIN_PAGES = ["/chaves-api/", "/auditoria/", "/ligacoes/nova/base-de-dados/", "/ligacoes/nova/api/"]
 
     def test_login_required(self):
         for name in self.PAGES + self.ADMIN_PAGES:
-            response = self.client.get(reverse(name))
+            response = self.client.get(name)
             self.assertEqual(response.status_code, 302, name)
             self.assertTrue(response["Location"].startswith("/entrar/"))
 
@@ -74,12 +71,12 @@ class AccessTests(DashboardTestCase):
     def test_viewer_pages_and_admin_pages(self):
         self.login(self.viewer)
         for name in self.PAGES:
-            self.assertEqual(self.client.get(reverse(name)).status_code, 200, name)
+            self.assertEqual(self.client.get(name).status_code, 200, name)
         for name in self.ADMIN_PAGES:
-            self.assertEqual(self.client.get(reverse(name)).status_code, 403, name)
+            self.assertEqual(self.client.get(name).status_code, 403, name)
         self.login(self.admin)
         for name in self.PAGES + self.ADMIN_PAGES:
-            self.assertEqual(self.client.get(reverse(name)).status_code, 200, name)
+            self.assertEqual(self.client.get(name).status_code, 200, name)
 
     def test_menu_hides_admin_links_for_viewer(self):
         self.login(self.viewer)
@@ -101,8 +98,8 @@ class IsolationTests(DashboardTestCase):
         key_b, _ = ApiKey.generate(self.b, "B")
         self.assertEqual(self.client.post(f"/faturas/{self.inv_b.pk}/enviar/").status_code, 404)
         self.assertEqual(self.client.post(f"/chaves-api/{key_b.pk}/revogar/").status_code, 404)
-        self.assertEqual(self.client.get(f"/origens/{self.src_b.pk}/editar/").status_code, 404)
-        self.assertEqual(self.client.post(f"/origens/{self.src_b.pk}/sincronizar/").status_code, 404)
+        self.assertEqual(self.client.get(f"/ligacoes/{self.src_b.pk}/editar/").status_code, 404)
+        self.assertEqual(self.client.post(f"/ligacoes/{self.src_b.pk}/sincronizar/").status_code, 404)
         key_b.refresh_from_db()
         self.assertTrue(key_b.active)
 
@@ -208,67 +205,6 @@ class InvoiceViewTests(DashboardTestCase):
             self.assertContains(self.client.get("/"), "Configuração AGT incompleta")
 
 
-class SourceViewTests(DashboardTestCase):
-    def post_source(self, **data):
-        base = {"code": "HOST", "name": "HOST", "system": "HOST Hotel Systems", "kind": "DATABASE",
-                "active": "on", "connection": "default", "mapping": ""}
-        base.update(data)
-        return self.client.post("/origens/nova/", base)
-
-    def test_create_database_source(self):
-        self.login(self.admin)
-        response = self.post_source(mapping=json.dumps(MAPPING))
-        self.assertRedirects(response, "/origens/")
-        source = DataSource.objects.get(company=self.a, code="HOST")
-        self.assertEqual(source.mapping["cursor_column"], "Id")
-        self.assertTrue(AuditEvent.objects.filter(action="SOURCE_CREATED").exists())
-
-    def test_validation_errors(self):
-        self.login(self.admin)
-        self.assertContains(self.post_source(connection=""), "Obrigatória")
-        self.assertContains(self.post_source(code="API"), "Já existe uma origem")
-        self.assertContains(self.post_source(mapping="{nao json"), "JSON")
-        bad = dict(MAPPING, documents_query="DELETE FROM Docs WHERE Id > :cursor")
-        self.assertContains(self.post_source(mapping=json.dumps(bad)), "documents_query")
-        self.assertFalse(DataSource.objects.filter(code="HOST").exists())
-
-    def test_same_code_allowed_in_other_company(self):
-        self.login(self.admin)
-        self.post_source(code="HOST")
-        self.assertEqual(DataSource.objects.filter(code="HOST").count(), 1)
-        self.assertEqual(DataSource.objects.filter(code="API").count(), 2)
-
-    def test_code_locked_after_import(self):
-        self.login(self.admin)
-        response = self.client.post(f"/origens/{self.src_a.pk}/editar/",
-                                    {"code": "NOVO", "name": "Renomeada", "kind": "DATABASE", "active": "on",
-                                     "connection": "", "mapping": ""})
-        self.assertRedirects(response, "/origens/")
-        self.src_a.refresh_from_db()
-        self.assertEqual((self.src_a.code, self.src_a.kind, self.src_a.name), ("API", "API", "Renomeada"))
-
-    def test_operator_cannot_edit(self):
-        self.login(self.operator)
-        self.assertEqual(self.post_source().status_code, 403)
-
-    def test_sync_and_test_buttons(self):
-        source = DataSource.objects.create(company=self.a, code="HOST", name="H", kind="DATABASE",
-                                           connection="semconfig", mapping=MAPPING)
-        self.login(self.operator)
-        response = self.client.post(f"/origens/{source.pk}/sincronizar/", follow=True)
-        self.assertContains(response, "HOST_SEMCONFIG_DB_ENGINE")
-        response = self.client.post(f"/origens/{source.pk}/testar/", follow=True)
-        self.assertContains(response, "HOST_SEMCONFIG_DB_ENGINE")
-        self.assertEqual(self.client.post(f"/origens/{self.src_a.pk}/testar/").status_code, 404)  # API
-        self.login(self.viewer)
-        self.assertEqual(self.client.post(f"/origens/{source.pk}/sincronizar/").status_code, 403)
-
-    def test_list_shows_mapping_pending(self):
-        DataSource.objects.create(company=self.a, code="HOST", name="H", kind="DATABASE", connection="default")
-        self.login(self.viewer)
-        self.assertContains(self.client.get("/origens/"), "mapeamento por configurar")
-
-
 class AgtViewTests(DashboardTestCase):
     def form_data(self, **changes):
         data = {"environment": "SIMULATION", "base_url": "", "software_certificate_number": "", "software_name": "",
@@ -321,7 +257,7 @@ class ApiKeyViewTests(DashboardTestCase):
         self.assertEqual(api.status_code, 200)
 
     def test_cannot_use_other_company_or_database_source(self):
-        db = DataSource.objects.create(company=self.a, code="HOST", name="H", kind="DATABASE", connection="default")
+        db = DataSource.objects.create(company=self.a, code="HOST", name="H", kind="DATABASE", connection_mode="ENV", connection="default")
         self.login(self.admin)
         for source in (self.src_b, db):
             response = self.client.post("/chaves-api/", {"name": "x", "source": source.pk})

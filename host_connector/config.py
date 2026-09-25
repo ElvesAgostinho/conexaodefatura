@@ -154,21 +154,66 @@ class HostConnectionConfig:
         config.validate()
         return config
 
+    @classmethod
+    def from_values(
+        cls,
+        *,
+        engine: str,
+        host: str = "",
+        port: int | None = None,
+        name: str = "",
+        user: str = "",
+        password: str = "",
+        odbc_driver: str = "",
+        trust_server_certificate: bool = False,
+        options: str = "",
+        url: str = "",
+        connect_timeout: int = 10,
+    ) -> HostConnectionConfig:
+        """Ligação configurada no painel (valores guardados na origem, senha já decifrada)."""
+        engine = _ALIASES.get((engine or "").strip().lower(), (engine or "").strip().lower())
+        url = (url or "").strip()
+        if url:
+            engine = engine if engine and engine != "url" else make_url(url).get_backend_name()
+        elif engine not in SUPPORTED_ENGINES:
+            raise HostConfigError(f"Motor de base de dados não suportado: {engine!r}.")
+        config = cls(
+            engine=engine,
+            host=(host or "").strip() or None,
+            port=port or (None if url else _DEFAULT_PORTS.get(engine)),
+            name=(name or "").strip() or None,
+            user=(user or "").strip() or None,
+            password=password or None,
+            odbc_driver=(odbc_driver or "").strip() or "ODBC Driver 18 for SQL Server",
+            trust_server_certificate=bool(trust_server_certificate),
+            connect_timeout=connect_timeout,
+            options=_parse_options(options, "Opções"),
+            url_override=url or None,
+            env_prefix="",
+        )
+        config.validate()
+        return config
+
+    def _missing(self, var: str, label: str) -> str:
+        """Nome a mostrar para um valor em falta: variável do .env ou campo do painel."""
+        return f"{self.env_prefix}{var} não está definido" if self.env_prefix else f"Falta indicar: {label}"
+
     def validate(self) -> None:
-        p = self.env_prefix
         if self.url_override:
             return
         if not self.name:
-            raise HostConfigError(f"{p}NAME não está definido (nome da BD, serviço Oracle ou caminho SQLite).")
+            raise HostConfigError(
+                self._missing("NAME", "nome da base de dados") + " (nome da BD, serviço Oracle ou caminho SQLite)."
+            )
         if self.engine == "sqlite":
             if not Path(self.name).is_file():
-                raise HostConfigError(f"Ficheiro SQLite do HOST não encontrado: {self.name}")
+                raise HostConfigError(f"Ficheiro SQLite não encontrado: {self.name}")
             return
         if not self.host:
-            raise HostConfigError(f"{p}HOST não está definido.")
+            raise HostConfigError(self._missing("HOST", "servidor") + ".")
         # SQL Server sem utilizador usa autenticação integrada do Windows.
         if not self.user and self.engine != "mssql":
-            raise HostConfigError(f"{p}USER não está definido.")
+            raise HostConfigError(self._missing("USER", "utilizador") + ".")
 
     @property
     def uses_windows_auth(self) -> bool:

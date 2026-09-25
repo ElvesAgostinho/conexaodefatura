@@ -1,0 +1,89 @@
+{% extends "dashboard/base.html" %}
+{% block title %}Mapeamento · {{ source.code }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <div class="crumbs"><a href="{% url 'dashboard:connections' %}">Ligações</a> › <a href="{% url 'dashboard:connection' source.pk %}">{{ source.code }}</a> › Mapeamento</div>
+    <h1>Assistente de mapeamento</h1>
+    <div class="sub">Indique onde estão as faturas nesta base de dados. As consultas são geradas automaticamente, só de leitura.</div>
+  </div>
+  <div class="actions"><a class="btn" href="{% url 'dashboard:connection_explore' source.pk %}"><svg class="icon sm"><use href="#i-table"/></svg>Explorar estrutura</a></div>
+</div>
+
+<section class="card">
+  <div class="card-head"><h2>1. Tabelas</h2></div>
+  <form method="get" class="card-body">
+    <div class="form-grid">
+      {% include "dashboard/_field.html" with field=tables_form.documents_table %}
+      {% include "dashboard/_field.html" with field=tables_form.lines_table %}
+    </div>
+    <button class="btn" type="submit">Continuar <svg class="icon sm"><use href="#i-arrow"/></svg></button>
+  </form>
+</section>
+
+{% if form %}
+<form method="post" class="mt">
+  {% csrf_token %}
+  {% if form.errors %}<div class="alert error"><svg class="icon"><use href="#i-alert"/></svg><div>Há campos por preencher. Veja as indicações abaixo.</div></div>{% endif %}
+  <section class="card">
+    <div class="card-head"><h2>2. Leitura incremental</h2><span class="hint">{{ doc_ref.qualified }}</span></div>
+    <div class="card-body"><div class="form-grid">
+      {% include "dashboard/_field.html" with field=form.cursor_column %}
+      {% include "dashboard/_field.html" with field=form.cursor_type %}
+      {% include "dashboard/_field.html" with field=form.link_column %}
+      {% include "dashboard/_field.html" with field=form.batch_size %}
+    </div></div>
+  </section>
+
+  <div class="grid g-2 mt">
+    <section class="card">
+      <div class="card-head"><h2>3. Cabeçalho do documento</h2><span class="hint">{{ doc_ref.qualified }}</span></div>
+      <table class="map-table"><tbody>
+      {% for name, label, col, fixed, required in form.header_rows %}
+        <tr><td><strong>{{ label }}</strong>{% if required %} <span class="req" style="color:var(--bad)">*</span>{% endif %}<span class="sub mono">{{ name }}</span></td>
+          <td>{{ col }}{% if col.errors %}<ul class="errors">{% for e in col.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}</td>
+          <td>{% if fixed %}{{ fixed }}{% endif %}</td></tr>
+      {% endfor %}
+      </tbody></table>
+    </section>
+    <section class="card">
+      <div class="card-head"><h2>4. Linhas do documento</h2><span class="hint">{{ line_ref.qualified }}</span></div>
+      <table class="map-table"><tbody>
+      {% for name, label, col, fixed, required in form.line_rows %}
+        <tr><td><strong>{{ label }}</strong>{% if required %} <span class="req" style="color:var(--bad)">*</span>{% endif %}<span class="sub mono">{{ name }}</span></td>
+          <td>{{ col }}{% if col.errors %}<ul class="errors">{% for e in col.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}</td>
+          <td>{{ fixed }}</td></tr>
+      {% endfor %}
+      </tbody></table>
+    </section>
+  </div>
+
+  <div class="card mt">
+    <div class="form-foot" style="border-top:0;border-radius:var(--radius)">
+      <span class="help" style="margin-right:auto">Pré-visualize primeiro: lê os 3 primeiros documentos e mostra como ficariam, sem importar nada.</span>
+      <button class="btn" type="submit" name="action" value="preview"><svg class="icon sm"><use href="#i-search"/></svg>Pré-visualizar</button>
+      <button class="btn primary" type="submit" name="action" value="save"><svg class="icon sm"><use href="#i-check"/></svg>Guardar mapeamento</button>
+    </div>
+  </div>
+</form>
+{% endif %}
+
+{% if preview is not None %}
+<section class="card mt">
+  <div class="card-head"><h2>Pré-visualização</h2><span class="hint">nada foi importado</span></div>
+  <div class="table-wrap"><table>
+    <thead><tr><th>ID</th><th>Documento</th><th>Resultado</th></tr></thead>
+    <tbody>
+    {% for item in preview %}
+      <tr><td class="mono">{{ item.document_id }}</td>
+        <td>{% if item.summary %}<strong>{{ item.summary.número }}</strong><span class="sub">{{ item.summary.data|date:"d/m/Y" }} · {{ item.summary.cliente }} · {{ item.summary.total }} · {{ item.summary.linhas }} linha(s)</span>{% else %}—{% endif %}</td>
+        <td>{% if item.ok %}<span class="pill ok">válido</span>{% else %}<ul class="errors">{% for e in item.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}</td></tr>
+    {% empty %}<tr><td colspan="3" class="empty">A consulta não devolveu documentos.</td></tr>{% endfor %}
+    </tbody>
+  </table></div>
+  {% if generated %}<details class="tableview card-body"><summary>Ver consultas geradas</summary><pre style="margin-top:.5rem">{{ generated.documents_query }}
+
+{{ generated.lines_query }}</pre></details>{% endif %}
+</section>
+{% endif %}
+{% endblock %}

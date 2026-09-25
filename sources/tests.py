@@ -128,16 +128,16 @@ class DataSourceModelTests(TestCase):
         with self.assertRaises(ValidationError) as ctx:
             DataSource(company=self.company, code="HOST", name="H", kind="DATABASE",
                        mapping={"documents_query": "DELETE FROM x"}).full_clean()
-        self.assertIn("connection", ctx.exception.message_dict)
+        self.assertIn("db_engine", ctx.exception.message_dict)  # modo painel: falta o sistema de BD
         self.assertIn("mapping", ctx.exception.message_dict)
-        DataSource(company=self.company, code="HOST", name="H", kind="DATABASE", connection="default",
+        DataSource(company=self.company, code="HOST", name="H", kind="DATABASE", connection_mode="ENV", connection="default",
                    mapping=MAPPING).full_clean()
         # Sem mapeamento ainda é válido (é configurado na Fase 6 depois de estudar a BD real).
-        DataSource(company=self.company, code="HOST", name="H", kind="DATABASE", connection="default").full_clean()
+        DataSource(company=self.company, code="HOST", name="H", kind="DATABASE", connection_mode="ENV", connection="default").full_clean()
 
     def test_api_source_has_no_connection_or_mapping(self):
         with self.assertRaises(ValidationError) as ctx:
-            DataSource(company=self.company, code="API", name="A", kind="API", connection="x",
+            DataSource(company=self.company, code="API", name="A", kind="API", connection_mode="ENV", connection="x",
                        mapping=MAPPING).full_clean()
         self.assertEqual(set(ctx.exception.message_dict), {"connection", "mapping"})
 
@@ -177,7 +177,7 @@ class SyncTests(TestCase):
         self.addCleanup(env.stop)
         self.company = Company.objects.create(name="Hotel", nif="5000000000")
         self.source = DataSource.objects.create(company=self.company, code="HOST", name="HOST", kind="DATABASE",
-                                                connection="h1", mapping=deepcopy(MAPPING))
+                                                connection_mode="ENV", connection="h1", mapping=deepcopy(MAPPING))
 
     def execute(self, script):
         conn = sqlite3.connect(self.db_path)

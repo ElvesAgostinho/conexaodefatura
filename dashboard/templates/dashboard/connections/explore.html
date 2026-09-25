@@ -1,0 +1,41 @@
+{% extends "dashboard/base.html" %}
+{% block title %}Estrutura · {{ source.code }}{% endblock %}
+{% block content %}
+<div class="page-head">
+  <div>
+    <div class="crumbs"><a href="{% url 'dashboard:connections' %}">Ligações</a> › <a href="{% url 'dashboard:connection' source.pk %}">{{ source.code }}</a> › Estrutura</div>
+    <h1>Estrutura da base de dados</h1>
+    <div class="sub">{{ source.connection_summary }} · só leitura · {{ tables|length }} tabela(s)/vista(s)</div>
+  </div>
+  <div class="actions"><a class="btn primary" href="{% url 'dashboard:connection_mapping' source.pk %}"><svg class="icon sm"><use href="#i-map"/></svg>Assistente de mapeamento</a></div>
+</div>
+<div class="grid" style="grid-template-columns:minmax(260px,1fr) minmax(0,2.4fr)">
+  <section class="card">
+    <form class="card-head" method="get"><input type="search" name="q" value="{{ q }}" placeholder="Filtrar tabelas…">{% if selected %}<input type="hidden" name="tabela" value="{{ selected.qualified }}">{% endif %}</form>
+    <div class="table-list">
+      {% for t in tables %}<a href="?tabela={{ t.qualified|urlencode }}{% if q %}&amp;q={{ q|urlencode }}{% endif %}" class="{% if selected and t.qualified == selected.qualified %}active{% endif %}"><span>{{ t.qualified }}</span><span class="sub" style="display:inline">{{ t.kind }}</span></a>
+      {% empty %}<div class="empty">Sem tabelas.</div>{% endfor %}
+    </div>
+  </section>
+  <div class="stack">
+    {% if selected %}
+    <section class="card">
+      <div class="card-head"><h2>{{ selected.qualified }}</h2><span class="hint">{{ columns|length }} coluna(s)</span></div>
+      <div class="table-wrap"><table>
+        <thead><tr><th>Coluna</th><th>Tipo</th><th>Nulo</th></tr></thead>
+        <tbody>{% for c in columns %}<tr><td><strong>{{ c.name }}</strong>{% if c.pk %} <span class="pill info plain">PK</span>{% endif %}</td><td class="mono">{{ c.type }}</td><td>{% if c.nullable %}sim{% else %}não{% endif %}</td></tr>{% endfor %}</tbody>
+      </table></div>
+    </section>
+    <section class="card">
+      <div class="card-head"><h2>Amostra</h2><span class="hint">até 5 linhas · nada é gravado</span></div>
+      <div class="table-wrap"><table>
+        <thead><tr>{% for c in sample_columns %}<th>{{ c }}</th>{% endfor %}</tr></thead>
+        <tbody>{% for row in sample_rows %}<tr>{% for v in row %}<td style="white-space:nowrap">{{ v }}</td>{% endfor %}</tr>{% empty %}<tr><td class="empty" colspan="{{ sample_columns|length|default:1 }}">Tabela vazia.</td></tr>{% endfor %}</tbody>
+      </table></div>
+    </section>
+    {% else %}
+    <section class="card"><div class="card-body empty">Escolha uma tabela à esquerda para ver as colunas e algumas linhas.</div></section>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

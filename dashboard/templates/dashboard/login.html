@@ -1,17 +1,36 @@
 {% extends "dashboard/base.html" %}
 {% block title %}Entrar{% endblock %}
 {% block body %}
-<div class="login">
-  <div class="panel">
-    <div class="brand" style="margin-bottom:1rem">Gateway Fiscal<small>Origens → AGT</small></div>
-    {% if form.errors %}<div class="msg error">Utilizador ou senha incorretos.</div>{% endif %}
-    <form method="post">
-      {% csrf_token %}
-      <div class="form-row"><label for="id_username">Utilizador</label>{{ form.username }}</div>
-      <div class="form-row"><label for="id_password">Senha</label>{{ form.password }}</div>
-      <input type="hidden" name="next" value="{{ next }}">
-      <button class="btn primary" type="submit" style="width:100%">Entrar</button>
-    </form>
-  </div>
+<div class="login-page">
+  <section class="login-hero">
+    <div class="brand" style="padding:0">
+      <div class="brand-mark"><svg viewBox="0 0 24 24"><path d="M4 7h10M4 12h16M4 17h7"/><path d="M17 4l3 3-3 3"/></svg></div>
+      <div class="brand-name">Gateway Fiscal<small>Faturação → AGT</small></div>
+    </div>
+    <div>
+      <h2>Toda a faturação das suas empresas, comunicada à AGT num só lugar.</h2>
+      <p>Liga-se ao HOST e a qualquer outro sistema — por base de dados ou por API — valida os documentos e trata do envio.</p>
+      <ul>
+        <li><svg class="icon"><use href="#i-db"/></svg>Leitura segura, só de leitura, em qualquer SGBD</li>
+        <li><svg class="icon"><use href="#i-cloud"/></svg>API para ERP, POS e outros sistemas</li>
+        <li><svg class="icon"><use href="#i-shield"/></svg>Validação, fila de envio e auditoria completa</li>
+      </ul>
+    </div>
+    <small style="color:#7f93b5">Segredos cifrados · acessos por empresa e papel</small>
+  </section>
+  <section class="login-form">
+    <div class="login-box">
+      <h1>Entrar</h1>
+      <p class="sub">Use as credenciais fornecidas pelo administrador.</p>
+      {% if form.errors %}<div class="alert error"><svg class="icon"><use href="#i-alert"/></svg><div>Utilizador ou senha incorretos.</div></div>{% endif %}
+      <form method="post">
+        {% csrf_token %}
+        <div class="field"><label for="id_username">Utilizador</label>{{ form.username }}</div>
+        <div class="field"><label for="id_password">Senha</label>{{ form.password }}</div>
+        <input type="hidden" name="next" value="{{ next }}">
+        <button class="btn primary" type="submit">Entrar <svg class="icon sm"><use href="#i-arrow"/></svg></button>
+      </form>
+    </div>
+  </section>
 </div>
 {% endblock %}

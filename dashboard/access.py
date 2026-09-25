@@ -43,5 +43,11 @@ def company_view(minimum=Role.VIEWER):
     return decorator
 
 
+def safe_next(request, default: str) -> str:
+    """Só aceita destinos internos (evita redirecionamentos para outros sites)."""
+    target = request.POST.get("next") or request.GET.get("next") or ""
+    return target if target.startswith("/") and not target.startswith("//") and "\\" not in target else default
+
+
 def can(request, minimum) -> bool:
     return has_role(request.user, request.company, minimum)

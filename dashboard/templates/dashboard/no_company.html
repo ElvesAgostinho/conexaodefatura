@@ -1,9 +1,14 @@
 {% extends "dashboard/base.html" %}
 {% block title %}Sem empresa{% endblock %}
 {% block body %}
-<div class="login"><div class="panel">
-  <h1>Sem acesso a empresas</h1>
-  <p class="muted">O seu utilizador ainda não tem acesso a nenhuma empresa ativa. Peça a um administrador.</p>
-  <form method="post" action="{% url 'dashboard:logout' %}">{% csrf_token %}<button class="btn" type="submit">Sair</button></form>
-</div></div>
+<div class="login-page" style="grid-template-columns:1fr">
+  <section class="login-form">
+    <div class="login-box card" style="padding:2rem">
+      <div class="kpi-icon amber" style="margin-bottom:1rem"><svg class="icon lg"><use href="#i-building"/></svg></div>
+      <h1>Sem acesso a empresas</h1>
+      <p class="sub">O seu utilizador ainda não tem acesso a nenhuma empresa ativa. Peça a um administrador.</p>
+      <form method="post" action="{% url 'dashboard:logout' %}">{% csrf_token %}<button class="btn" type="submit"><svg class="icon sm"><use href="#i-logout"/></svg>Terminar sessão</button></form>
+    </div>
+  </section>
+</div>
 {% endblock %}

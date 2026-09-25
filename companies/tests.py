@@ -124,7 +124,7 @@ class HostCommandTargetTests(TestCase):
 
     def test_host_sample_with_company(self):
         company = Company.objects.create(name="Hotel 2", nif="5000000002")
-        DataSource.objects.create(company=company, code="HOST", name="HOST", kind="DATABASE", connection="h2")
+        DataSource.objects.create(company=company, code="HOST", name="HOST", kind="DATABASE", connection_mode="ENV", connection="h2")
         DataSource.objects.create(company=company, code="API", name="API", kind="API")  # ignorada
         out = StringIO()
         with mock.patch.dict(os.environ, self.env, clear=True):
@@ -133,8 +133,8 @@ class HostCommandTargetTests(TestCase):
 
     def test_company_with_several_database_sources_needs_source(self):
         company = Company.objects.create(name="Grupo", nif="5000000004")
-        DataSource.objects.create(company=company, code="HOST", name="HOST", kind="DATABASE", connection="h2")
-        DataSource.objects.create(company=company, code="ERP", name="ERP", kind="DATABASE", connection="erp")
+        DataSource.objects.create(company=company, code="HOST", name="HOST", kind="DATABASE", connection_mode="ENV", connection="h2")
+        DataSource.objects.create(company=company, code="ERP", name="ERP", kind="DATABASE", connection_mode="ENV", connection="erp")
         with self.assertRaisesRegex(CommandError, "HOST, ERP|ERP, HOST"):
             call_command("host_check", "--company", "5000000004", stdout=StringIO())
         out = StringIO()
@@ -167,10 +167,10 @@ class CompanyModelTests(TestCase):
     def test_source_connection_validation(self):
         company = Company.objects.create(name="A", nif="1")
         for good in ("default", "HOTEL2", "hotel_sul"):
-            DataSource(company=company, code="HOST", name="H", kind="DATABASE", connection=good).full_clean()
+            DataSource(company=company, code="HOST", name="H", kind="DATABASE", connection_mode="ENV", connection=good).full_clean()
         for bad in ("hotel-2", "2x", "a b"):
             with self.subTest(bad=bad), self.assertRaises(ValidationError):
-                DataSource(company=company, code="HOST", name="H", kind="DATABASE", connection=bad).full_clean()
+                DataSource(company=company, code="HOST", name="H", kind="DATABASE", connection_mode="ENV", connection=bad).full_clean()
 
 
 class AccessTests(TestCase):
@@ -239,7 +239,7 @@ class ApiKeyTests(TestCase):
         api_key, _ = ApiKey.generate(self.company, "POS", pos)
         self.assertEqual(api_key.source, pos)
         db_source = DataSource.objects.create(company=self.company, code="HOST", name="H", kind="DATABASE",
-                                              connection="default")
+                                              connection_mode="ENV", connection="default")
         other = Company.objects.create(name="B", nif="2")
         other_source = DataSource.objects.create(company=other, code="API", name="API", kind="API")
         for bad in (db_source, other_source):
