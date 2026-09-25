@@ -1,0 +1,200 @@
+{% extends "dashboard/base.html" %}
+{% load static %}
+{% block title %}Guia: ligar a base de dados{% endblock %}
+{% block content %}
+<div class="guide">
+  <div class="crumbs"><a href="{% url 'dashboard:home' %}">Início</a> › <a href="{% url 'dashboard:help' %}">Ajuda</a> › Base de dados</div>
+  <section class="card guide-hero">
+    <div class="kpi-icon blue"><svg class="icon lg"><use href="#i-db"/></svg></div>
+    <div>
+      <h1>Ligar uma base de dados SQL Server</h1>
+      <p>Em 7 passos simples, o Gateway passa a ler as faturas do seu sistema. <strong>Só lê</strong>: nunca apaga nem altera nada na sua base de dados.</p>
+    </div>
+  </section>
+
+  <h3>Antes de começar, vai precisar de:</h3>
+  <ul class="need">
+    <li><svg class="icon"><use href="#i-user"/></svg><div><b>Alguém com acesso ao SQL Server</b><span>O técnico de informática ou o fornecedor do sistema.</span></div></li>
+    <li><svg class="icon"><use href="#i-settings"/></svg><div><b>SQL Server Management Studio</b><span>O programa gratuito da Microsoft para gerir o SQL Server (SSMS).</span></div></li>
+    <li><svg class="icon"><use href="#i-clock"/></svg><div><b>Cerca de 10 minutos</b><span>Só se faz uma vez.</span></div></li>
+  </ul>
+
+  <nav class="toc">
+    <a href="#p1">1. Nome do servidor</a><a href="#p2">2. Nome da base</a><a href="#p3">3. Utilizador só de leitura</a>
+    <a href="#p4">4. Modo de autenticação</a><a href="#p5">5. Rede (se preciso)</a><a href="#p6">6. Preencher no Gateway</a>
+    <a href="#p7">7. Onde estão as faturas</a><a href="#problemas">Problemas comuns</a><a href="#outros">Outros sistemas</a>
+  </nav>
+
+  <div class="g-step" id="p1"><div class="g-num">1</div><div class="g-body">
+    <h2>Descobrir o nome do servidor</h2>
+    <p class="lead">Abra o <strong>SQL Server Management Studio</strong>. Na primeira janela ("Connect to Server"), o nome do servidor aparece no campo <strong>Server name</strong> <span class="badge-num">1</span>. Tome nota dele.</p>
+    <figure class="shot"><img src="{% static 'dashboard/help/ssms-connect.svg' %}" alt="Janela Connect to Server com o campo Server name destacado"><figcaption>Ilustração da janela "Connect to Server" do SQL Server Management Studio.</figcaption></figure>
+    <ul>
+      <li>Se for só um nome (ex.: <code>HOTEL-SRV</code>), é a instância principal do computador.</li>
+      <li>Se tiver uma barra (ex.: <code>HOTEL-SRV\SQLEXPRESS</code>), escreva-o <strong>exatamente assim</strong>, com a barra.</li>
+      <li>Se o Gateway estiver instalado no <strong>mesmo computador</strong> do SQL Server, pode usar <code>localhost</code>.</li>
+    </ul>
+  </div></div>
+
+  <div class="g-step" id="p2"><div class="g-num">2</div><div class="g-body">
+    <h2>Descobrir o nome da base de dados</h2>
+    <p class="lead">Depois de entrar no SSMS, abra a pasta <strong>Databases</strong> à esquerda. Cada nome é uma base de dados.</p>
+    <div class="tip"><svg class="icon"><use href="#i-info"/></svg><div>Se houver várias e não souber qual é a do sistema de faturação, pergunte ao fornecedor do sistema (por exemplo, à HOST). Não adivinhe.</div></div>
+  </div></div>
+
+  <div class="g-step" id="p3"><div class="g-num">3</div><div class="g-body">
+    <h2>Criar um utilizador só de leitura para o Gateway</h2>
+    <p class="lead">Por segurança, o Gateway entra com um utilizador próprio que <strong>só consegue ler</strong>. Há duas maneiras de o criar — escolha uma.</p>
+
+    <h3>Maneira A — com o gerador (mais fácil)</h3>
+    <p>Escreva o nome da base de dados, carregue em <strong>Gerar</strong> e copie o script. No SSMS, clique em <strong>New Query</strong>, cole o script e carregue em <strong>Execute</strong> (ou F5).</p>
+    <div class="gen">
+      <div class="field" style="margin:0"><label for="gen-db">Nome da base de dados (passo 2)</label><input type="text" id="gen-db" placeholder="ex.: HOST_HOTEL"></div>
+      <div class="field" style="margin:0"><label for="gen-user">Nome do utilizador</label><input type="text" id="gen-user" value="gateway_leitura"></div>
+    </div>
+    <div class="actions" style="margin-bottom:.6rem"><button class="btn primary" type="button" id="gen-btn"><svg class="icon sm"><use href="#i-bolt"/></svg>Gerar script e senha</button></div>
+    <div class="code-block"><pre id="gen-sql">-- Escreva o nome da base de dados acima e carregue em "Gerar script e senha".</pre><button class="btn sm" type="button" data-copy="gen-sql"><svg class="icon sm"><use href="#i-copy"/></svg>Copiar</button></div>
+    <div class="warn-box"><svg class="icon"><use href="#i-lock"/></svg><div>A senha é gerada <strong>no seu computador</strong> e não é enviada a lado nenhum. Guarde-a: vai precisar dela no passo 6. O script dá <strong>apenas</strong> permissão de leitura (<code>db_datareader</code>).</div></div>
+
+    <h3>Maneira B — com cliques no SSMS</h3>
+    <ol>
+      <li>Abra <strong>Security</strong>, clique com o botão direito em <strong>Logins</strong> e escolha <strong>New Login…</strong> <span class="badge-num">2</span></li>
+    </ol>
+    <figure class="shot"><img src="{% static 'dashboard/help/ssms-new-login.svg' %}" alt="Object Explorer com o menu New Login destacado"><figcaption>Security › Logins › New Login…</figcaption></figure>
+    <ol start="2">
+      <li>Em <strong>Login name</strong> escreva <code>gateway_leitura</code> <span class="badge-num">3</span>.</li>
+      <li>Escolha <strong>SQL Server authentication</strong>, escreva uma senha forte duas vezes <span class="badge-num">4</span> e <strong>desmarque</strong> "User must change password at next login".</li>
+    </ol>
+    <figure class="shot"><img src="{% static 'dashboard/help/ssms-login-general.svg' %}" alt="Janela Login - New, página General"><figcaption>Página "General" do novo login.</figcaption></figure>
+    <ol start="4">
+      <li>À esquerda, abra <strong>User Mapping</strong>. Marque a base de dados do sistema <span class="badge-num">5</span>.</li>
+      <li>Em baixo, marque <strong>só</strong> <code>db_datareader</code> <span class="badge-num">6</span>. <strong>Não</strong> marque <code>db_datawriter</code> nem <code>db_owner</code>. Carregue em <strong>OK</strong>.</li>
+    </ol>
+    <figure class="shot"><img src="{% static 'dashboard/help/ssms-user-mapping.svg' %}" alt="Página User Mapping com db_datareader marcado"><figcaption>Página "User Mapping": só leitura.</figcaption></figure>
+  </div></div>
+
+  <div class="g-step" id="p4"><div class="g-num">4</div><div class="g-body">
+    <h2>Confirmar que o SQL Server aceita utilizadores com senha</h2>
+    <p class="lead">No SSMS, clique com o botão direito no nome do servidor › <strong>Properties</strong> › <strong>Security</strong>. Tem de estar escolhido <strong>"SQL Server and Windows Authentication mode"</strong> <span class="badge-num">7</span>.</p>
+    <figure class="shot"><img src="{% static 'dashboard/help/server-auth.svg' %}" alt="Server Properties, Security, modo SQL Server e Windows"><figcaption>Se tiver de mudar esta opção, reinicie o serviço "SQL Server" no fim.</figcaption></figure>
+  </div></div>
+
+  <div class="g-step" id="p5"><div class="g-num">5</div><div class="g-body">
+    <h2>Só se o Gateway estiver noutro computador: abrir a rede</h2>
+    <p class="lead">Se o Gateway e o SQL Server estão no <strong>mesmo computador</strong>, salte este passo.</p>
+    <ol>
+      <li>Abra o <strong>SQL Server Configuration Manager</strong> e ative o <strong>TCP/IP</strong> <span class="badge-num">8</span>.</li>
+      <li>Reinicie o serviço "SQL Server".</li>
+      <li>No Firewall do Windows do servidor, permita a porta <strong>1433</strong> apenas a partir do computador do Gateway.</li>
+    </ol>
+    <figure class="shot"><img src="{% static 'dashboard/help/sql-network.svg' %}" alt="SQL Server Configuration Manager com TCP/IP ativado"><figcaption>SQL Server Network Configuration › Protocols › TCP/IP = Enabled.</figcaption></figure>
+  </div></div>
+
+  <div class="g-step" id="p6"><div class="g-num">6</div><div class="g-body">
+    <h2>Preencher no Gateway</h2>
+    <p class="lead">No Gateway, vá a <a href="{% url 'dashboard:connections' %}">Ligações</a> e carregue em <strong>Ligar base de dados</strong>.</p>
+    <figure class="shot"><img src="{% static 'dashboard/help/panel-connect-buttons.png' %}" alt="Botões Ligar base de dados e Ligar por API"></figure>
+    <p>Preencha assim:</p>
+    <section class="card" style="margin-bottom:1rem"><table class="fill-table"><tbody>
+      <tr><td>Nome</td><td>Um nome para reconhecer, ex.: <code>HOST do hotel</code></td></tr>
+      <tr><td>Código</td><td>Uma palavra curta em maiúsculas, ex.: <code>HOST</code>. Não se muda depois.</td></tr>
+      <tr><td>Configuração da ligação</td><td><strong>Configurada no painel</strong></td></tr>
+      <tr><td>Sistema de base de dados</td><td><strong>SQL Server</strong></td></tr>
+      <tr><td>Servidor</td><td>O nome do passo 1, ex.: <code>HOTEL-SRV\SQLEXPRESS</code> ou <code>localhost</code></td></tr>
+      <tr><td>Porta</td><td>Deixe <strong>vazio</strong> (só se o técnico indicar outra)</td></tr>
+      <tr><td>Base de dados</td><td>O nome do passo 2</td></tr>
+      <tr><td>Utilizador / Senha</td><td><code>gateway_leitura</code> e a senha do passo 3. A senha fica guardada <strong>cifrada</strong>.</td></tr>
+      <tr><td>Confiar no certificado</td><td>Marque se, ao testar, aparecer um erro de "certificado"</td></tr>
+    </tbody></table></section>
+    <figure class="shot"><img src="{% static 'dashboard/help/panel-db-form.png' %}" alt="Formulário da ligação preenchido"><figcaption>Exemplo real de uma ligação a um SQL Server.</figcaption></figure>
+    <div class="ok-box"><svg class="icon"><use href="#i-check"/></svg><div>Carregue em <strong>Testar ligação</strong>. Se aparecer <strong>"Ligação OK"</strong>, carregue em <strong>Guardar</strong>. Se aparecer um erro, veja os <a href="#problemas">problemas comuns</a>.</div></div>
+  </div></div>
+
+  <div class="g-step" id="p7"><div class="g-num">7</div><div class="g-body">
+    <h2>Mostrar ao Gateway onde estão as faturas</h2>
+    <p class="lead">Na página da ligação aparecem os passos que faltam. É aqui que o técnico (ou o fornecedor do sistema) indica em que tabelas estão as faturas.</p>
+    <figure class="shot"><img src="{% static 'dashboard/help/panel-db-steps.png' %}" alt="Página da ligação com os passos"></figure>
+    <ol>
+      <li><strong>Explorar</strong>: mostra as tabelas e algumas linhas, para encontrar onde estão as faturas.</li>
+      <li><strong>Assistente</strong>: escolha a tabela das faturas e a das linhas, e em cada campo escolha a coluna certa da lista.</li>
+      <li><strong>Pré-visualizar</strong>: mostra as 3 primeiras faturas como vão ficar — <strong>sem importar nada</strong>.</li>
+      <li><strong>Guardar mapeamento</strong> e depois <strong>Sincronizar agora</strong>. As faturas aparecem em <a href="{% url 'dashboard:invoices' %}">Faturas</a>.</li>
+    </ol>
+    <figure class="shot"><img src="{% static 'dashboard/help/panel-mapping.png' %}" alt="Assistente de mapeamento"><figcaption>O assistente só mostra colunas que existem mesmo na sua base de dados.</figcaption></figure>
+  </div></div>
+
+  <section class="card" id="problemas">
+    <div class="card-head"><h2>Problemas comuns ao testar a ligação</h2></div>
+    <div class="table-wrap"><table>
+      <thead><tr><th>Se a mensagem disser…</th><th>O que quer dizer</th><th>O que fazer</th></tr></thead>
+      <tbody>
+        <tr><td><code>Login failed for user</code></td><td>Utilizador ou senha errados</td><td>Confirme o utilizador e a senha (passo 3) e o modo de autenticação (passo 4).</td></tr>
+        <tr><td><code>server was not found</code> ou <code>not accessible</code></td><td>O Gateway não encontra o servidor</td><td>Confirme o nome do servidor (passo 1). Se estiver noutro computador, faça o passo 5.</td></tr>
+        <tr><td><code>certificate chain</code> / <code>not trusted</code></td><td>O SQL Server usa um certificado próprio</td><td>Marque <strong>Confiar no certificado do servidor</strong> e teste de novo.</td></tr>
+        <tr><td><code>Cannot open database</code></td><td>O utilizador não tem acesso a essa base</td><td>Confirme o nome da base (passo 2) e o "User Mapping" (passo 3).</td></tr>
+        <tr><td><code>Data source name not found</code> / driver</td><td>Falta o controlador ODBC no computador do Gateway</td><td>Instale o "ODBC Driver 18 for SQL Server" da Microsoft.</td></tr>
+        <tr><td><code>Login timeout expired</code></td><td>A rede não deixa passar</td><td>Firewall e TCP/IP (passo 5). Confirme a porta.</td></tr>
+        <tr><td>"Falta indicar: …"</td><td>Um campo obrigatório está vazio</td><td>Preencha o campo indicado.</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <section class="card mt" id="outros">
+    <div class="card-head"><h2>Outros sistemas de base de dados</h2></div>
+    <div class="card-body">
+      <p>O processo é igual: criar um utilizador só de leitura e preencher a ligação. Scripts de exemplo (substitua os nomes e a senha):</p>
+      <h3>PostgreSQL</h3>
+      <div class="code-block"><pre id="sql-pg">CREATE ROLE gateway_leitura LOGIN PASSWORD 'SenhaForte';
+GRANT CONNECT ON DATABASE nome_da_base TO gateway_leitura;
+GRANT USAGE ON SCHEMA public TO gateway_leitura;
+GRANT SELECT ON ALL TABLES IN SCHEMA public TO gateway_leitura;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO gateway_leitura;</pre><button class="btn sm" type="button" data-copy="sql-pg"><svg class="icon sm"><use href="#i-copy"/></svg>Copiar</button></div>
+      <h3>MySQL / MariaDB</h3>
+      <div class="code-block"><pre id="sql-my">CREATE USER 'gateway_leitura'@'IP_DO_GATEWAY' IDENTIFIED BY 'SenhaForte';
+GRANT SELECT ON nome_da_base.* TO 'gateway_leitura'@'IP_DO_GATEWAY';</pre><button class="btn sm" type="button" data-copy="sql-my"><svg class="icon sm"><use href="#i-copy"/></svg>Copiar</button></div>
+      <h3>Oracle</h3>
+      <div class="code-block"><pre id="sql-ora">CREATE USER gateway_leitura IDENTIFIED BY "SenhaForte";
+GRANT CREATE SESSION TO gateway_leitura;
+-- Uma linha por tabela que o Gateway precisa de ler:
+GRANT SELECT ON ESQUEMA.TABELA_FATURAS TO gateway_leitura;</pre><button class="btn sm" type="button" data-copy="sql-ora"><svg class="icon sm"><use href="#i-copy"/></svg>Copiar</button></div>
+    </div>
+  </section>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  function copy(btn) {
+    var text = document.getElementById(btn.dataset.copy).textContent;
+    if (navigator.clipboard) navigator.clipboard.writeText(text).then(function () { btn.lastChild.textContent = "Copiado"; });
+  }
+  document.querySelectorAll("[data-copy]").forEach(function (b) { b.addEventListener("click", function () { copy(b); }); });
+
+  // Gerador: senha aleatória no próprio navegador (nunca é enviada ao servidor).
+  function password() {
+    var chars = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789", out = "", bytes = new Uint32Array(20);
+    crypto.getRandomValues(bytes);
+    bytes.forEach(function (n) { out += chars[n % chars.length]; });
+    return "Gw-" + out + "!7";
+  }
+  function ident(value) { return value.replace(/]/g, "]]"); }
+  document.getElementById("gen-btn").addEventListener("click", function () {
+    var db = document.getElementById("gen-db").value.trim();
+    var user = document.getElementById("gen-user").value.trim() || "gateway_leitura";
+    var out = document.getElementById("gen-sql");
+    if (!db) { out.textContent = "-- Escreva primeiro o nome da base de dados (passo 2)."; document.getElementById("gen-db").focus(); return; }
+    var pw = password();
+    out.textContent =
+      "-- Utilizador SÓ DE LEITURA para o Gateway Fiscal\n" +
+      "-- SENHA (guarde-a para o passo 6): " + pw + "\n" +
+      "CREATE LOGIN [" + ident(user) + "] WITH PASSWORD = N'" + pw + "', CHECK_POLICY = ON, DEFAULT_DATABASE = [" + ident(db) + "];\n" +
+      "GO\n" +
+      "USE [" + ident(db) + "];\n" +
+      "CREATE USER [" + ident(user) + "] FOR LOGIN [" + ident(user) + "];\n" +
+      "ALTER ROLE db_datareader ADD MEMBER [" + ident(user) + "];\n" +
+      "GO";
+  });
+})();
+</script>
+{% endblock %}

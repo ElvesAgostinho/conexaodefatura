@@ -1,7 +1,7 @@
 from django.contrib.auth import views as auth_views
 from django.urls import path
 
-from . import connections, views
+from . import connections, help, views
 
 app_name = "dashboard"
 
@@ -30,4 +30,8 @@ urlpatterns = [
     path("chaves-api/", views.api_keys, name="api_keys"),
     path("chaves-api/<int:pk>/revogar/", views.api_key_revoke, name="api_key_revoke"),
     path("auditoria/", views.audit_log, name="audit"),
+    # Ajuda
+    path("ajuda/", help.help_index, name="help"),
+    path("ajuda/base-de-dados/", help.help_database, name="help_database"),
+    path("ajuda/api/", help.help_api, name="help_api"),
 ]

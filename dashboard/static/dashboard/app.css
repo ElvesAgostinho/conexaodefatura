@@ -339,3 +339,49 @@ input:disabled, select:disabled, textarea:disabled { background: var(--surface-2
   .topbar { flex-wrap: wrap; height: auto; padding: .6rem 1rem; }
   .content { padding: 1rem; }
 }
+
+/* ------------------------------------------------------------------ guias */
+.guide { max-width: 980px; }
+.guide-hero { display: flex; gap: 1.25rem; align-items: center; padding: 1.4rem 1.5rem; margin-bottom: 1.25rem; background: linear-gradient(135deg, var(--primary-soft), var(--surface)); }
+.guide-hero .kpi-icon { width: 56px; height: 56px; border-radius: 16px; }
+.guide-hero p { margin: .35rem 0 0; color: var(--text-2); }
+.need { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: .75rem; margin: 0 0 1.5rem; padding: 0; list-style: none; }
+.need li { display: flex; gap: .6rem; align-items: flex-start; padding: .8rem .9rem; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-sm); }
+.need li .icon { color: var(--primary); margin-top: 2px; }
+.need b { display: block; }
+.need span { color: var(--muted); font-size: .82rem; }
+.g-step { display: grid; grid-template-columns: 48px 1fr; gap: 1rem; margin-bottom: 1.25rem; }
+.g-num { width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; font-weight: 800; font-size: 1.1rem; color: #fff; background: linear-gradient(135deg, #4a90ff, #1f5fd6); box-shadow: 0 6px 16px rgba(31, 95, 214, .3); position: sticky; top: 76px; }
+.g-body { min-width: 0; }
+.g-body h2 { font-size: 1.15rem; margin: .45rem 0 .35rem; }
+.g-body .lead { color: var(--text-2); margin-bottom: .9rem; }
+.g-body ol, .g-body ul { padding-left: 1.2rem; margin: 0 0 .9rem; }
+.g-body li { margin-bottom: .35rem; }
+.g-body li::marker { color: var(--primary); font-weight: 700; }
+.badge-num { display: inline-grid; place-items: center; width: 22px; height: 22px; border-radius: 50%; background: #e8590c; color: #fff; font-size: .75rem; font-weight: 800; vertical-align: -3px; margin-right: .2rem; }
+figure.shot { margin: .5rem 0 1rem; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: .75rem; box-shadow: var(--shadow); }
+figure.shot img { display: block; width: 100%; height: auto; border-radius: 8px; }
+figure.shot figcaption { color: var(--muted); font-size: .8rem; padding: .6rem .2rem 0; }
+.tip, .warn-box, .ok-box { display: flex; gap: .7rem; align-items: flex-start; padding: .85rem 1rem; border-radius: var(--radius-sm); margin: .5rem 0 1rem; }
+.tip { background: var(--info-soft); color: var(--text); border-left: 4px solid var(--info); }
+.warn-box { background: var(--warn-soft); color: var(--text); border-left: 4px solid var(--warn); }
+.ok-box { background: var(--ok-soft); color: var(--text); border-left: 4px solid var(--ok); }
+.tip .icon { color: var(--info); } .warn-box .icon { color: var(--warn); } .ok-box .icon { color: var(--ok); }
+.code-block { position: relative; margin: .5rem 0 1rem; }
+.code-block pre { padding-right: 6.5rem; font-size: .82rem; line-height: 1.5; }
+.code-block .btn { position: absolute; top: .5rem; right: .5rem; }
+.fill-table td:first-child { font-weight: 600; white-space: nowrap; width: 30%; }
+.fill-table td { padding: .6rem .9rem; vertical-align: top; }
+.fill-table code { background: var(--surface-2); padding: .1rem .35rem; border-radius: 5px; border: 1px solid var(--line); }
+.choose { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; margin-bottom: 1.5rem; }
+.choose .card { padding: 1.3rem 1.4rem; display: flex; flex-direction: column; gap: .6rem; }
+.choose h2 { font-size: 1.1rem; display: flex; gap: .6rem; align-items: center; }
+.choose ul { margin: 0; padding-left: 1.1rem; color: var(--text-2); }
+.choose .when { font-size: .85rem; color: var(--muted); }
+.choose .btn { align-self: flex-start; margin-top: auto; }
+.gen { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .75rem; margin-bottom: .6rem; }
+.toc { display: flex; flex-wrap: wrap; gap: .4rem; margin: 0 0 1.25rem; }
+.toc a { font-size: .82rem; padding: .3rem .7rem; border-radius: 999px; background: var(--surface); border: 1px solid var(--line); color: var(--text-2); }
+.toc a:hover { border-color: var(--primary); color: var(--primary); text-decoration: none; }
+@media (max-width: 900px) { .choose, .gen { grid-template-columns: 1fr; } .g-step { grid-template-columns: 1fr; } .g-num { position: static; } }
+figure.shot img[src$=".svg"] { max-width: 700px; margin: 0 auto; }

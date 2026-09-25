@@ -5,6 +5,7 @@
   <div>
     <div class="crumbs"><a href="{% url 'dashboard:home' %}">Início</a> › <a href="{% url 'dashboard:connections' %}">Ligações</a> › {% if source %}{{ source.code }}{% else %}Nova{% endif %}</div>
     <h1>{% if source %}Editar ligação {{ source.code }}{% elif is_database %}Ligar base de dados{% else %}Ligar por API{% endif %}</h1>
+    <div class="sub"><a href="{% if is_database %}{% url 'dashboard:help_database' %}{% else %}{% url 'dashboard:help_api' %}{% endif %}"><svg class="icon sm" style="vertical-align:-3px"><use href="#i-help"/></svg> Não sabe o que preencher? Veja o guia passo a passo</a></div>
     <div class="sub">{% if is_database %}O Gateway só lê: use um utilizador da base de dados com permissão apenas de leitura.{% else %}O sistema externo envia as faturas; a seguir cria-se a chave de API.{% endif %}</div>
   </div>
 </div>

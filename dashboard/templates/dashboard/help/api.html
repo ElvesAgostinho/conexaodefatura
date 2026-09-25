@@ -1,0 +1,87 @@
+{% extends "dashboard/base.html" %}
+{% load static %}
+{% block title %}Guia: ligar por API{% endblock %}
+{% block content %}
+<div class="guide">
+  <div class="crumbs"><a href="{% url 'dashboard:home' %}">Início</a> › <a href="{% url 'dashboard:help' %}">Ajuda</a> › API</div>
+  <section class="card guide-hero">
+    <div class="kpi-icon green"><svg class="icon lg"><use href="#i-cloud"/></svg></div>
+    <div>
+      <h1>Ligar um sistema por API</h1>
+      <p>O seu sistema de faturação envia cada fatura para o Gateway, que a valida e trata do envio à AGT. Só é preciso <strong>um endereço</strong> e <strong>uma chave</strong>.</p>
+    </div>
+  </section>
+
+  <section class="card" style="margin-bottom:1.25rem">
+    <div class="card-body">
+      <h3>Como funciona, em palavras simples</h3>
+      <p>Pense no Gateway como um <strong>balcão de receção</strong>. O seu sistema entrega lá cada fatura, como quem entrega uma carta. Para o balcão aceitar, a carta tem de vir com um <strong>cartão de identificação</strong>: a <strong>chave de API</strong>. Sem chave válida, o balcão recusa.</p>
+      <figure class="shot" style="margin-bottom:0"><img src="{% static 'dashboard/help/api-flow.svg' %}" alt="O sistema envia a fatura com a chave ao Gateway, que valida e envia à AGT"></figure>
+    </div>
+  </section>
+
+  <h3>Vai precisar de:</h3>
+  <ul class="need">
+    <li><svg class="icon"><use href="#i-user"/></svg><div><b>Quem programa o seu sistema</b><span>O fornecedor do ERP, POS ou loja online.</span></div></li>
+    <li><svg class="icon"><use href="#i-key"/></svg><div><b>Ser administrador no Gateway</b><span>Para criar a chave.</span></div></li>
+    <li><svg class="icon"><use href="#i-clock"/></svg><div><b>5 minutos da sua parte</b><span>O resto é com o programador.</span></div></li>
+  </ul>
+
+  <div class="g-step"><div class="g-num">1</div><div class="g-body">
+    <h2>Criar a ligação</h2>
+    <p class="lead">Vá a <a href="{% url 'dashboard:connections' %}">Ligações</a> e carregue em <strong>Ligar por API</strong>. Dê-lhe um nome (ex.: <code>POS do restaurante</code>) e um código curto (ex.: <code>POS</code>). Guarde.</p>
+    <figure class="shot"><img src="{% static 'dashboard/help/panel-connect-buttons.png' %}" alt="Botão Ligar por API"></figure>
+  </div></div>
+
+  <div class="g-step"><div class="g-num">2</div><div class="g-body">
+    <h2>Criar a chave de API</h2>
+    <p class="lead">Na página da ligação, do lado direito, escreva um nome para a chave e carregue em <strong>Criar chave</strong>.</p>
+    <figure class="shot"><img src="{% static 'dashboard/help/panel-api.png' %}" alt="Página da ligação por API com o endereço, exemplos e chaves"><figcaption>A página da ligação mostra o endereço, exemplos prontos e as chaves.</figcaption></figure>
+    <div class="warn-box"><svg class="icon"><use href="#i-lock"/></svg><div>A chave aparece <strong>uma única vez</strong>. Copie-a logo e guarde-a num lugar seguro — é como uma senha. Se a perder, crie outra e revogue a antiga.</div></div>
+  </div></div>
+
+  <div class="g-step"><div class="g-num">3</div><div class="g-body">
+    <h2>Entregar ao programador</h2>
+    <p class="lead">Envie ao programador do seu sistema estas três coisas:</p>
+    <section class="card" style="margin-bottom:1rem"><table class="fill-table"><tbody>
+      <tr><td>Endereço</td><td><div class="copy-row"><code id="ep">{{ endpoint }}</code><button class="btn sm" type="button" data-copy="ep"><svg class="icon sm"><use href="#i-copy"/></svg>Copiar</button></div></td></tr>
+      <tr><td>Chave de API</td><td>A que copiou no passo 2 (envie por um meio seguro, nunca num e-mail aberto a várias pessoas)</td></tr>
+      <tr><td>Instruções técnicas</td><td>O documento <code>docs/api.md</code> do Gateway e o exemplo de fatura em JSON que aparece na página da ligação</td></tr>
+    </tbody></table></section>
+    <div class="tip"><svg class="icon"><use href="#i-info"/></svg><div>Se o sistema estiver noutro computador ou na internet, use o endereço pelo qual esse computador chega ao Gateway (ex.: <code>https://gateway.suaempresa.ao/api/v1/documents/</code>). Em produção, use sempre <strong>https</strong>.</div></div>
+  </div></div>
+
+  <div class="g-step"><div class="g-num">4</div><div class="g-body">
+    <h2>Testar a chave (opcional)</h2>
+    <p class="lead">Num computador com Windows, abra o <strong>PowerShell</strong>, cole esta linha, troque <code>&lt;CHAVE&gt;</code> pela sua chave e carregue em Enter:</p>
+    <div class="code-block"><pre id="ps">Invoke-RestMethod -Uri "{{ ping }}" -Headers @{ Authorization = "Api-Key &lt;CHAVE&gt;" }</pre><button class="btn sm" type="button" data-copy="ps"><svg class="icon sm"><use href="#i-copy"/></svg>Copiar</button></div>
+    <div class="ok-box"><svg class="icon"><use href="#i-check"/></svg><div>Se aparecer o nome da sua empresa e da ligação, a chave está a funcionar.</div></div>
+  </div></div>
+
+  <div class="g-step"><div class="g-num">5</div><div class="g-body">
+    <h2>Acompanhar as faturas</h2>
+    <p class="lead">Cada fatura enviada aparece em <a href="{% url 'dashboard:invoices' %}">Faturas</a> e na página da ligação. O que o Gateway responde ao sistema:</p>
+    <section class="card"><table class="fill-table"><tbody>
+      <tr><td><span class="pill ok">201</span> Criado</td><td>Fatura recebida. Tudo certo.</td></tr>
+      <tr><td><span class="pill ok">200</span> Já existia</td><td>A mesma fatura foi enviada outra vez. Não se duplica — é seguro repetir.</td></tr>
+      <tr><td><span class="pill warn">400</span> Dados inválidos</td><td>Falta algum campo ou está mal escrito. A resposta diz qual.</td></tr>
+      <tr><td><span class="pill bad">401</span> Não autorizado</td><td>Chave errada, revogada ou em falta.</td></tr>
+      <tr><td><span class="pill warn">409</span> Conflito</td><td>Já existe uma fatura com esse número, ou tentou alterar uma fatura já comunicada à AGT.</td></tr>
+      <tr><td><span class="pill warn">429</span> Demasiados pedidos</td><td>O sistema enviou demasiado depressa. Esperar um pouco e repetir.</td></tr>
+    </tbody></table></section>
+  </div></div>
+
+  <div class="tip"><svg class="icon"><use href="#i-shield"/></svg><div><strong>Boas práticas:</strong> uma chave por sistema (é fácil saber quem enviou o quê); revogue logo uma chave que possa ter sido vista por outra pessoa; cada chave só vê as faturas da sua própria ligação.</div></div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.querySelectorAll("[data-copy]").forEach(function (btn) {
+  btn.addEventListener("click", function () {
+    var text = document.getElementById(btn.dataset.copy).textContent;
+    if (navigator.clipboard) navigator.clipboard.writeText(text).then(function () { btn.lastChild.textContent = "Copiado"; });
+  });
+});
+</script>
+{% endblock %}

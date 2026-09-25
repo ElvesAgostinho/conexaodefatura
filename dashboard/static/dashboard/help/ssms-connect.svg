@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 420" font-family="Segoe UI, system-ui, sans-serif" font-size="13">
+  <title>Ilustração: janela "Connect to Server" do SQL Server Management Studio</title>
+  <rect x="10" y="10" width="620" height="400" rx="8" fill="#ffffff" stroke="#b9c0cc"/>
+  <path d="M10 18a8 8 0 0 1 8-8h604a8 8 0 0 1 8 8v22H10z" fill="#eef1f5"/>
+  <text x="26" y="31" font-weight="600" fill="#1d2330">Connect to Server</text>
+  <g fill="#8a94a6"><rect x="560" y="22" width="12" height="2"/><rect x="584" y="17" width="10" height="10" fill="none" stroke="#8a94a6"/><path d="M606 17l10 10M616 17l-10 10" stroke="#8a94a6" stroke-width="1.5"/></g>
+  <rect x="10" y="40" width="620" height="54" fill="#1f3b63"/>
+  <text x="30" y="74" font-size="20" font-weight="300" fill="#ffffff">SQL Server</text>
+
+  <g fill="#1d2330">
+    <text x="40" y="132">Server type:</text>
+    <text x="40" y="176">Server name:</text>
+    <text x="40" y="220">Authentication:</text>
+    <text x="64" y="262">Login:</text>
+    <text x="64" y="302">Password:</text>
+  </g>
+  <g fill="#ffffff" stroke="#b9c0cc">
+    <rect x="200" y="114" width="360" height="28" rx="3"/>
+    <rect x="200" y="202" width="360" height="28" rx="3"/>
+    <rect x="224" y="244" width="336" height="28" rx="3"/>
+    <rect x="224" y="284" width="336" height="28" rx="3"/>
+  </g>
+  <text x="212" y="133" fill="#1d2330">Database Engine</text>
+  <text x="212" y="221" fill="#1d2330">SQL Server Authentication</text>
+  <text x="236" y="263" fill="#1d2330">gateway_leitura</text>
+  <text x="236" y="303" fill="#1d2330" letter-spacing="3">••••••••••</text>
+  <g fill="none" stroke="#6b7280" stroke-width="1.4"><path d="M540 124l5 5 5-5M540 212l5 5 5-5"/></g>
+
+  <rect x="196" y="154" width="368" height="36" rx="5" fill="#fff4e6" stroke="#e8590c" stroke-width="2"/>
+  <rect x="200" y="158" width="360" height="28" rx="3" fill="#ffffff" stroke="#b9c0cc"/>
+  <text x="212" y="177" fill="#1d2330" font-weight="600">MEU-SERVIDOR\SQLEXPRESS</text>
+
+  <g fill="#e8590c"><circle cx="600" cy="172" r="13"/></g>
+  <text x="600" y="177" text-anchor="middle" fill="#fff" font-weight="700">1</text>
+
+  <rect x="352" y="352" width="100" height="32" rx="4" fill="#1f6fd1"/>
+  <text x="402" y="373" text-anchor="middle" fill="#fff" font-weight="600">Connect</text>
+  <rect x="462" y="352" width="100" height="32" rx="4" fill="#ffffff" stroke="#b9c0cc"/>
+  <text x="512" y="373" text-anchor="middle" fill="#1d2330">Cancel</text>
+</svg>

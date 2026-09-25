@@ -1,0 +1,30 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 330" font-family="Segoe UI, system-ui, sans-serif" font-size="13">
+  <title>Ilustração: SQL Server Configuration Manager com o protocolo TCP/IP ativado</title>
+  <rect x="10" y="10" width="660" height="310" rx="8" fill="#ffffff" stroke="#b9c0cc"/>
+  <path d="M10 18a8 8 0 0 1 8-8h644a8 8 0 0 1 8 8v22H10z" fill="#eef1f5"/>
+  <text x="26" y="31" font-weight="600" fill="#1d2330">Sql Server Configuration Manager</text>
+  <rect x="10" y="40" width="260" height="280" fill="#f6f8fb"/>
+  <g fill="#1d2330">
+    <text x="22" y="66">▸ SQL Server Services</text>
+    <text x="22" y="92">▾ SQL Server Network Configuration</text>
+  </g>
+  <rect x="36" y="102" width="220" height="24" rx="3" fill="#dbe8fb"/>
+  <text x="44" y="119" fill="#1d2330" font-weight="600">Protocols for SQLEXPRESS</text>
+  <text x="22" y="150" fill="#1d2330">▸ SQL Native Client Configuration</text>
+
+  <rect x="286" y="52" width="370" height="24" fill="#eef1f5"/>
+  <text x="296" y="68" fill="#6b7280" font-size="12" font-weight="600">Protocol Name</text>
+  <text x="520" y="68" fill="#6b7280" font-size="12" font-weight="600">Status</text>
+  <text x="296" y="98" fill="#1d2330">Shared Memory</text><text x="520" y="98" fill="#1d2330">Enabled</text>
+  <text x="296" y="124" fill="#1d2330">Named Pipes</text><text x="520" y="124" fill="#6b7280">Disabled</text>
+  <rect x="288" y="134" width="366" height="26" rx="4" fill="#fff4e6" stroke="#e8590c" stroke-width="2"/>
+  <text x="296" y="152" fill="#1d2330" font-weight="700">TCP/IP</text><text x="520" y="152" fill="#1d7a46" font-weight="700">Enabled</text>
+  <circle cx="640" cy="186" r="12" fill="#e8590c"/><text x="640" y="191" text-anchor="middle" fill="#fff" font-weight="700">8</text>
+  <text x="296" y="196" fill="#4a5568">Duplo clique em TCP/IP → "Enabled: Yes".</text>
+  <text x="296" y="216" fill="#4a5568">Depois reinicie o serviço "SQL Server".</text>
+
+  <rect x="296" y="238" width="350" height="74" rx="6" fill="#eef4ff" stroke="#9fbef0"/>
+  <text x="310" y="263" fill="#1d2330" font-weight="600">Firewall do Windows</text>
+  <text x="310" y="284" fill="#4a5568">Permita a porta TCP 1433 (ou a porta da instância)</text>
+  <text x="310" y="300" fill="#4a5568" font-size="12">só a partir do computador do Gateway.</text>
+</svg>

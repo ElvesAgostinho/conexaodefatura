@@ -50,8 +50,21 @@ Administrador, Operador, Consulta). No painel, configurar as origens, a AGT e as
 - **Configuração AGT**: ambiente, endereço, software certificado, envio automático,
   tentativas. Os segredos ficam no `.env`; o painel só mostra se estão definidos.
 - **Chaves de API** e **Auditoria**: só administradores.
+- **Guias de ligação** (menu Ajuda): passo a passo para leigos, com ilustrações do SQL Server
+  Management Studio, gerador de script do utilizador só de leitura, e guia da API.
 
 Cada utilizador só vê as empresas a que tem acesso. Todas as ações ficam na auditoria.
+
+## Teste com um SQL Server real (opcional)
+
+`docs/teste_sqlserver.sql` cria uma base de teste (dados fictícios). Com um utilizador só de
+leitura nessa base:
+
+```powershell
+$env:GATEWAY_IT_MSSQL_HOST="localhost"; $env:GATEWAY_IT_MSSQL_DB="GatewayTeste"
+$env:GATEWAY_IT_MSSQL_USER="gateway_leitura"; $env:GATEWAY_IT_MSSQL_PASSWORD="..."
+.venv\Scripts\python manage.py test sources.test_mssql_integration
+```
 
 ## Bases de dados de origem (somente leitura)
 

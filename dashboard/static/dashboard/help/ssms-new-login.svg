@@ -1,0 +1,35 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 380" font-family="Segoe UI, system-ui, sans-serif" font-size="13">
+  <title>Ilustração: Object Explorer do SQL Server Management Studio, menu Security, Logins, New Login</title>
+  <rect x="10" y="10" width="620" height="360" rx="8" fill="#ffffff" stroke="#b9c0cc"/>
+  <path d="M10 18a8 8 0 0 1 8-8h604a8 8 0 0 1 8 8v22H10z" fill="#eef1f5"/>
+  <text x="26" y="31" font-weight="600" fill="#1d2330">Object Explorer</text>
+
+  <g fill="#1d2330">
+    <text x="30" y="72">▾ 🖥 MEU-SERVIDOR\SQLEXPRESS (SQL Server 16.0)</text>
+    <text x="50" y="100">▸ 📁 Databases</text>
+    <text x="50" y="128">▾ 📁 Security</text>
+    <text x="90" y="184">▸ 📁 Server Roles</text>
+    <text x="90" y="212">▸ 📁 Credentials</text>
+    <text x="50" y="240">▸ 📁 Server Objects</text>
+    <text x="50" y="268">▸ 📁 Replication</text>
+    <text x="50" y="296">▸ 📁 Management</text>
+  </g>
+  <rect x="84" y="140" width="96" height="24" rx="3" fill="#dbe8fb"/>
+  <text x="90" y="157" fill="#1d2330" font-weight="600">▸ 📁 Logins</text>
+
+  <g>
+    <rect x="186" y="148" width="210" height="150" rx="4" fill="#ffffff" stroke="#b9c0cc"/>
+    <rect x="190" y="154" width="202" height="28" rx="3" fill="#fff4e6" stroke="#e8590c" stroke-width="2"/>
+    <text x="202" y="173" fill="#1d2330" font-weight="600">New Login...</text>
+    <line x1="194" y1="190" x2="388" y2="190" stroke="#e3e6ea"/>
+    <text x="202" y="212" fill="#6b7280">Filter</text>
+    <text x="202" y="238" fill="#6b7280">Start PowerShell</text>
+    <text x="202" y="264" fill="#6b7280">Reports</text>
+    <text x="202" y="290" fill="#6b7280">Refresh</text>
+  </g>
+  <circle cx="420" cy="168" r="13" fill="#e8590c"/>
+  <text x="420" y="173" text-anchor="middle" fill="#fff" font-weight="700">2</text>
+  <text x="442" y="164" fill="#1d2330" font-weight="600">Clique com o botão</text>
+  <text x="442" y="182" fill="#1d2330" font-weight="600">direito em "Logins"</text>
+  <text x="442" y="200" fill="#4a5568">e escolha "New Login..."</text>
+</svg>

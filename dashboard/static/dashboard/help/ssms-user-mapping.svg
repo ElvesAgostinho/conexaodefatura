@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 680 420" font-family="Segoe UI, system-ui, sans-serif" font-size="13">
+  <title>Ilustração: página "User Mapping" com a base de dados marcada e só o papel db_datareader</title>
+  <rect x="10" y="10" width="660" height="400" rx="8" fill="#ffffff" stroke="#b9c0cc"/>
+  <path d="M10 18a8 8 0 0 1 8-8h644a8 8 0 0 1 8 8v22H10z" fill="#eef1f5"/>
+  <text x="26" y="31" font-weight="600" fill="#1d2330">Login - New</text>
+  <rect x="10" y="40" width="160" height="370" fill="#f6f8fb"/>
+  <text x="26" y="92" fill="#1d2330">General</text>
+  <text x="26" y="120" fill="#1d2330">Server Roles</text>
+  <rect x="16" y="130" width="148" height="26" rx="3" fill="#dbe8fb"/>
+  <text x="26" y="148" fill="#1d2330" font-weight="600">User Mapping</text>
+  <text x="26" y="176" fill="#1d2330">Securables</text>
+
+  <text x="192" y="66" fill="#1d2330" font-weight="600">Users mapped to this login:</text>
+  <rect x="190" y="76" width="420" height="96" fill="#fff" stroke="#b9c0cc"/>
+  <rect x="190" y="76" width="420" height="22" fill="#eef1f5"/>
+  <text x="200" y="92" fill="#6b7280" font-size="12">Map   Database</text>
+  <rect x="192" y="100" width="416" height="24" fill="#fff4e6"/>
+  <rect x="200" y="105" width="13" height="13" rx="2" fill="#1f6fd1"/><path d="M202 111l3 3 6-6" stroke="#fff" stroke-width="2" fill="none"/>
+  <text x="238" y="117" fill="#1d2330" font-weight="600">BD_DO_SISTEMA</text>
+  <rect x="200" y="129" width="13" height="13" rx="2" fill="#fff" stroke="#6b7280"/><text x="238" y="141" fill="#6b7280">master</text>
+  <rect x="200" y="151" width="13" height="13" rx="2" fill="#fff" stroke="#6b7280"/><text x="238" y="163" fill="#6b7280">msdb</text>
+  <circle cx="640" cy="112" r="12" fill="#e8590c"/><text x="640" y="117" text-anchor="middle" fill="#fff" font-weight="700">5</text>
+
+  <text x="192" y="202" fill="#1d2330" font-weight="600">Database role membership for: BD_DO_SISTEMA</text>
+  <g font-size="13">
+    <rect x="200" y="216" width="13" height="13" rx="2" fill="#fff" stroke="#6b7280"/><text x="222" y="227" fill="#6b7280">db_accessadmin</text>
+    <rect x="200" y="240" width="13" height="13" rx="2" fill="#fff" stroke="#6b7280"/><text x="222" y="251" fill="#6b7280">db_backupoperator</text>
+    <rect x="194" y="260" width="240" height="26" rx="4" fill="#e4f4ea" stroke="#1d7a46" stroke-width="2"/>
+    <rect x="200" y="266" width="13" height="13" rx="2" fill="#1d7a46"/><path d="M202 272l3 3 6-6" stroke="#fff" stroke-width="2" fill="none"/>
+    <text x="222" y="277" fill="#1d7a46" font-weight="700">db_datareader</text>
+    <text x="330" y="277" fill="#1d7a46" font-size="12">✔ só leitura</text>
+    <rect x="194" y="290" width="240" height="26" rx="4" fill="#fbe7e5" stroke="#b3261e" stroke-width="2" stroke-dasharray="4 3"/>
+    <rect x="200" y="296" width="13" height="13" rx="2" fill="#fff" stroke="#b3261e"/>
+    <text x="222" y="307" fill="#b3261e" font-weight="600">db_datawriter</text>
+    <text x="330" y="307" fill="#b3261e" font-size="12">✘ NÃO marcar</text>
+    <rect x="200" y="326" width="13" height="13" rx="2" fill="#fff" stroke="#b3261e"/><text x="222" y="337" fill="#b3261e">db_owner  ✘ NÃO marcar</text>
+    <rect x="200" y="350" width="13" height="13" rx="2" fill="#1f6fd1"/><path d="M202 356l3 3 6-6" stroke="#fff" stroke-width="2" fill="none"/>
+    <text x="222" y="361" fill="#1d2330">public</text>
+  </g>
+  <circle cx="460" cy="273" r="12" fill="#e8590c"/><text x="460" y="278" text-anchor="middle" fill="#fff" font-weight="700">6</text>
+  <rect x="500" y="366" width="80" height="30" rx="4" fill="#1f6fd1"/><text x="540" y="386" text-anchor="middle" fill="#fff" font-weight="600">OK</text>
+</svg>

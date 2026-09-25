@@ -1,0 +1,52 @@
+{% extends "dashboard/base.html" %}
+{% block title %}Guias de ligação{% endblock %}
+{% block content %}
+<div class="guide">
+  <div class="page-head">
+    <div>
+      <div class="crumbs"><a href="{% url 'dashboard:home' %}">Início</a> › Ajuda</div>
+      <h1>Como ligar o seu sistema de faturação</h1>
+      <div class="sub">Há duas maneiras. Escolha a que serve ao seu caso — os guias explicam tudo, passo a passo.</div>
+    </div>
+  </div>
+
+  <div class="choose">
+    <section class="card">
+      <h2><span class="kpi-icon blue" style="width:40px;height:40px"><svg class="icon"><use href="#i-db"/></svg></span>Pela base de dados</h2>
+      <p>O Gateway <strong>vai buscar</strong> as faturas diretamente à base de dados do sistema (por exemplo, o SQL Server do HOST). Só lê — nunca altera nada.</p>
+      <ul>
+        <li>Não é preciso mexer no programa de faturação.</li>
+        <li>Precisa de alguém com acesso ao SQL Server (10 minutos).</li>
+      </ul>
+      <div class="when"><strong>Escolha esta se:</strong> o sistema guarda as faturas numa base de dados a que tem acesso (SQL Server, PostgreSQL, MySQL, Oracle…).</div>
+      <a class="btn primary" href="{% url 'dashboard:help_database' %}"><svg class="icon sm"><use href="#i-book"/></svg>Ver o guia da base de dados</a>
+    </section>
+    <section class="card">
+      <h2><span class="kpi-icon green" style="width:40px;height:40px"><svg class="icon"><use href="#i-cloud"/></svg></span>Por API</h2>
+      <p>O próprio sistema <strong>envia</strong> cada fatura para o Gateway, pela internet ou pela rede, com uma chave secreta.</p>
+      <ul>
+        <li>Não é preciso dar acesso à base de dados.</li>
+        <li>Precisa de quem programa o sistema (o fornecedor).</li>
+      </ul>
+      <div class="when"><strong>Escolha esta se:</strong> o fornecedor do seu ERP, POS ou loja online pode adicionar o envio das faturas.</div>
+      <a class="btn primary" href="{% url 'dashboard:help_api' %}"><svg class="icon sm"><use href="#i-book"/></svg>Ver o guia da API</a>
+    </section>
+  </div>
+
+  <section class="card">
+    <div class="card-head"><h2>Não sabe qual escolher?</h2></div>
+    <div class="card-body">
+      <div class="table-wrap"><table>
+        <thead><tr><th></th><th>Base de dados</th><th>API</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Quem trata</strong></td><td>Técnico de informática / administrador do SQL Server</td><td>Programador do sistema de faturação</td></tr>
+          <tr><td><strong>O que é preciso</strong></td><td>Servidor, nome da base, utilizador e senha só de leitura</td><td>O endereço do Gateway e uma chave de API</td></tr>
+          <tr><td><strong>Quando chegam as faturas</strong></td><td>De tempos a tempos (ex.: a cada 5 minutos)</td><td>No momento em que são emitidas</td></tr>
+          <tr><td><strong>Exemplo típico</strong></td><td>HOST Hotel Systems com SQL Server</td><td>Loja online, POS de restaurante, ERP à medida</td></tr>
+        </tbody>
+      </table></div>
+      <div class="tip" style="margin-bottom:0"><svg class="icon"><use href="#i-info"/></svg><div>Pode usar as duas ao mesmo tempo: por exemplo, o HOST pela base de dados e o POS do restaurante por API. Cada um aparece como uma <a href="{% url 'dashboard:connections' %}">ligação</a> diferente.</div></div>
+    </div>
+  </section>
+</div>
+{% endblock %}

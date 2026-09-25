@@ -33,6 +33,10 @@
       <a href="{% url 'dashboard:api_keys' %}" class="{% if url == 'api_keys' %}active{% endif %}"><svg class="icon"><use href="#i-key"/></svg>Chaves de API</a>
       {% endif %}
     </nav>
+    <div class="nav-section">Ajuda</div>
+    <nav class="nav">
+      <a href="{% url 'dashboard:help' %}" class="{% if 'help' in url %}active{% endif %}"><svg class="icon"><use href="#i-help"/></svg>Guias de ligação</a>
+    </nav>
     {% if nav_is_admin %}
     <div class="nav-section">Controlo</div>
     <nav class="nav">

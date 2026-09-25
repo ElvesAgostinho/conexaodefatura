@@ -8,6 +8,7 @@
     <div class="sub">{{ source.get_kind_display }}{% if source.system %} · {{ source.system }}{% endif %} · código <span class="mono">{{ source.code }}</span></div>
   </div>
   <div class="actions">
+    <a class="btn ghost" href="{% if source.kind == 'API' %}{% url 'dashboard:help_api' %}{% else %}{% url 'dashboard:help_database' %}{% endif %}"><svg class="icon sm"><use href="#i-help"/></svg>Guia</a>
     {% if can_admin %}<a class="btn" href="{% url 'dashboard:connection_edit' source.pk %}"><svg class="icon sm"><use href="#i-edit"/></svg>Editar</a>{% endif %}
     {% if source.kind == "DATABASE" and can_operate %}
       <form class="inline" method="post" action="{% url 'dashboard:connection_test' source.pk %}">{% csrf_token %}<button class="btn" type="submit"><svg class="icon sm"><use href="#i-bolt"/></svg>Testar ligação</button></form>
