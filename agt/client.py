@@ -21,7 +21,8 @@ class Outcome:
     ACCEPTED = "ACCEPTED"  # validado pela AGT
     PENDING = "PENDING"    # recebido, validação posterior
     REJECTED = "REJECTED"  # recusado (erro de negócio): não repetir
-    RETRY = "RETRY"        # falha temporária (rede, timeout, 5xx): repetir
+    RETRY = "RETRY"        # falha temporária da AGT (ex.: 5xx): repetir, com limite de tentativas
+    NETWORK = "NETWORK"    # sem ligação à AGT (rede, DNS, timeout): repetir SEM limite
     FATAL = "FATAL"        # falha que não se resolve a repetir (configuração)
 
 

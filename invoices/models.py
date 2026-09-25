@@ -76,6 +76,7 @@ class Invoice(models.Model):
     send_attempts = models.PositiveIntegerField("tentativas de envio", default=0)
     queued_at = models.DateTimeField(null=True, blank=True)
     next_attempt_at = models.DateTimeField("próxima tentativa", null=True, blank=True, db_index=True)
+    network_wait_since = models.DateTimeField("à espera de ligação à AGT desde", null=True, blank=True)
     last_error = models.TextField("último erro", blank=True)
     sent_at = models.DateTimeField("data de envio", null=True, blank=True)
     confirmed_at = models.DateTimeField(null=True, blank=True)

@@ -22,6 +22,9 @@
 {% elif agt_missing %}
   <div class="alert error"><svg class="icon"><use href="#i-alert"/></svg><div>Configuração AGT incompleta: falta {{ agt_missing|join:", " }}.</div></div>
 {% endif %}
+{% if network_wait %}
+  <div class="alert warning"><svg class="icon"><use href="#i-cloud"/></svg><div><strong>Sem ligação à AGT desde {{ network_wait.since|date:"d/m/Y H:i" }}.</strong> {{ network_wait.count }} fatura(s) à espera — são enviadas automaticamente quando a ligação à internet voltar. Nada se perde.</div></div>
+{% endif %}
 {% if stuck %}
   <div class="alert error"><svg class="icon"><use href="#i-alert"/></svg><div>{{ stuck }} documento(s) com envio interrompido precisam de decisão. <a href="{% url 'dashboard:invoices' %}?estado=SENDING">Ver documentos</a></div></div>
 {% endif %}

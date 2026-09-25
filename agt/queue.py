@@ -26,6 +26,10 @@ from .client import AgtResult, Outcome, client_for
 from .models import AgtConfiguration
 
 MAX_RETRY_DELAY = timedelta(hours=24)
+NETWORK_MAX_DELAY = timedelta(minutes=15)
+# Erros de rede (sem ligação, DNS, timeout, ligação recusada). OSError cobre os erros de
+# socket e as exceções de ligação das bibliotecas HTTP.
+NETWORK_ERRORS = (OSError, TimeoutError, ConnectionError)
 RESENDABLE = (InvoiceStatus.REJECTED, InvoiceStatus.ERROR)
 
 
@@ -67,6 +71,9 @@ class QueueStats:
     rejected: int = 0
     retried: int = 0
     failed: int = 0
+    waiting_network: int = 0
+    network_down: bool = False
+    network_recovered: bool = False
 
 
 def process_queue(*, company=None, limit: int = 100, now=None) -> QueueStats:
@@ -84,17 +91,27 @@ def process_queue(*, company=None, limit: int = 100, now=None) -> QueueStats:
         if not claimed:
             continue  # outro processo reservou-o
         invoice = Invoice.objects.select_related("company").get(pk=pk)
-        _send(invoice, stats, now)
+        outcome = _send(invoice, stats, now)
         stats.processed += 1
+        if outcome == Outcome.NETWORK:
+            # Sem ligação: não vale a pena esperar pelo timeout de cada uma das restantes.
+            stats.network_down = True
+            break
+        # A AGT respondeu: a ligação voltou. As faturas à espera de rede passam para já.
+        if not stats.network_recovered and not client_for(AgtConfiguration.for_company(invoice.company)).simulated:
+            waiting = Invoice.objects.filter(status=InvoiceStatus.QUEUED, network_wait_since__isnull=False)
+            stats.network_recovered = waiting.update(next_attempt_at=now) > 0
     return stats
 
 
-def _send(invoice: Invoice, stats: QueueStats, now) -> None:
+def _send(invoice: Invoice, stats: QueueStats, now) -> str:
     config = AgtConfiguration.for_company(invoice.company)
     client = client_for(config)
     try:
         result = client.send(invoice)
-    except Exception as exc:  # noqa: BLE001 - erro inesperado do cliente tratado como temporário
+    except NETWORK_ERRORS as exc:
+        result = AgtResult(outcome=Outcome.NETWORK, message=f"Sem ligação à AGT ({type(exc).__name__}: {exc})")
+    except Exception as exc:  # noqa: BLE001 - erro inesperado: temporário, mas com limite de tentativas
         result = AgtResult(outcome=Outcome.RETRY, message=f"{type(exc).__name__}: {exc}")
 
     invoice.simulated = client.simulated
@@ -103,7 +120,18 @@ def _send(invoice: Invoice, stats: QueueStats, now) -> None:
     if result.request_id:
         invoice.agt_request_id = result.request_id
 
-    if result.outcome == Outcome.ACCEPTED:
+    if result.outcome != Outcome.NETWORK:
+        invoice.network_wait_since = None
+
+    if result.outcome == Outcome.NETWORK:
+        # Nunca chegou à AGT: não conta como tentativa e repete sem limite.
+        invoice.status = InvoiceStatus.QUEUED
+        invoice.send_attempts = max(0, invoice.send_attempts - 1)
+        invoice.network_wait_since = invoice.network_wait_since or now
+        invoice.next_attempt_at = now + min(timedelta(seconds=config.retry_delay_seconds), NETWORK_MAX_DELAY)
+        invoice.last_error = result.message
+        stats.waiting_network += 1
+    elif result.outcome == Outcome.ACCEPTED:
         invoice.status = InvoiceStatus.CONFIRMED
         invoice.sent_at = invoice.sent_at or now
         invoice.confirmed_at = now
@@ -142,6 +170,7 @@ def _send(invoice: Invoice, stats: QueueStats, now) -> None:
         error_message="" if result.outcome in (Outcome.ACCEPTED, Outcome.PENDING) else result.message,
         simulated=client.simulated,
     )
+    return result.outcome
 
 
 def requeue_stuck(invoice: Invoice) -> bool:

@@ -2,32 +2,55 @@
 
 ## O que é preciso
 
-- Windows 10/11 ou Windows Server 2016+.
-- **Python 3.11 ou mais recente** (https://www.python.org/downloads/ — marcar
-  "Add python.exe to PATH"). Para o SQL Server, o **ODBC Driver 18 for SQL Server**.
-- Cerca de 10 minutos.
+- Windows 10/11 ou Windows Server 2016+ (64 bits).
+- Para ligar a SQL Server: o **ODBC Driver 18 for SQL Server** da Microsoft (gratuito). O
+  instalador avisa se faltar.
+- Cerca de 5 minutos. **Não é preciso instalar Python**: vem incluído no instalador.
 
-## Instalar (3 passos)
+## Instalar (recomendado: instalador .exe)
 
-1. Copie a pasta do Gateway para o computador do cliente (por exemplo, para o servidor
-   onde está o SQL Server).
-2. Abra a pasta `install` e faça **duplo clique em `Instalar Gateway Fiscal.cmd`**. O
-   Windows pede autorização de administrador (para o Gateway arrancar com o Windows).
-3. Responda a três perguntas: nome da empresa, NIF e senha do administrador.
+1. Copie `GatewayFiscal-Setup-<versão>.exe` para o computador do cliente (por exemplo, o
+   servidor onde está o SQL Server).
+2. Duplo clique. Responda: pasta (por omissão `C:\GatewayFiscal`), nome da empresa, NIF,
+   utilizador e senha do administrador, porta do painel. Opcional: permitir o acesso a
+   partir de outros computadores da rede (firewall).
+3. No fim, o painel abre na **Configuração automática**:
+   1. o cliente **autoriza** a procura de bases de dados (neste computador e, se quiser, na rede local);
+   2. escolhe o servidor e **autoriza** a entrada (conta do Windows ou um administrador do
+      SQL Server — usado só naquele momento, nunca guardado);
+   3. escolhe a base de dados (as que parecem ter faturas aparecem primeiro);
+   4. **aprova** a criação do utilizador só de leitura (o Gateway mostra os comandos exatos e
+      verifica depois que o utilizador não consegue escrever);
+   5. confirma o mapeamento sugerido com **Pré-visualizar** e guarda.
 
-No fim, o painel abre sozinho na **Configuração automática**:
+A partir daí o Gateway lê as faturas novas a cada 5 minutos e trata da fila de envio. Se a
+internet falhar, as faturas ficam à espera e são enviadas quando a ligação voltar.
 
-1. O cliente **autoriza** a procura de bases de dados (neste computador e, se quiser, na
-   rede local).
-2. Escolhe o servidor encontrado e **autoriza** a entrada (conta do Windows ou um
-   administrador do SQL Server — usado só naquele momento, nunca guardado).
-3. Escolhe a base de dados (as que parecem ter faturas aparecem primeiro).
-4. **Aprova** a criação de um utilizador só de leitura — o Gateway mostra os comandos
-   exatos antes de os executar e verifica depois que o utilizador não consegue escrever.
-5. Confirma o mapeamento sugerido com **Pré-visualizar** e guarda.
+### Instalação sem perguntas (técnicos, instalação em massa)
 
-A partir daí o Gateway lê as faturas novas a cada 5 minutos e trata da fila de envio.
-Todas as autorizações ficam registadas em *Auditoria*.
+```bat
+set GATEWAY_ADMIN_PASSWORD=Senha-Forte-Do-Admin
+GatewayFiscal-Setup-1.0.0.exe /VERYSILENT /EMPRESA="Hotel X, Lda" /NIF=5000000000 /PORTA=8000
+```
+
+A senha vai na variável de ambiente e **não** na linha de comando (o Inno Setup regista a
+linha de comando no registo da instalação). Outras opções: `/DIR=C:\GatewayFiscal`,
+`/UTILIZADOR=admin`, `/LOG=instalacao.log`, `/CURRENTUSER` (sem administrador: arranca
+quando o utilizador inicia sessão).
+
+**Atualizar:** corra o `.exe` da versão nova. Empresa, dados e `.env` mantêm-se.
+**Desinstalar:** Painel de Controlo › Programas, ou `unins000.exe` na pasta. Os dados
+(`dados\`, `.env`, `logs\`) ficam na pasta.
+
+### Construir o instalador (equipa do Gateway)
+
+`install\construir_instalador.ps1` descarrega o Python oficial da mesma versão, instala as
+dependências dentro dele, testa-o e compila `dist\GatewayFiscal-Setup-<versão>.exe` com o
+Inno Setup. A versão está em `config/version.py`.
+
+## Alternativa: instalar com PowerShell (Python já instalado)
+
+Duplo clique em `install\Instalar Gateway Fiscal.cmd` (precisa de Python 3.11+).
 
 ## O que o instalador faz
 

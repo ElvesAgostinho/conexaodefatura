@@ -19,7 +19,8 @@
 <div class="alert error"><svg class="icon"><use href="#i-alert"/></svg><div><strong>Erros de validação</strong> — corrija no sistema de origem; a próxima leitura atualiza o documento.
   <ul class="plain" style="margin-top:.35rem">{% for e in invoice.validation_errors %}<li>{{ e }}</li>{% endfor %}</ul></div></div>
 {% endif %}
-{% if invoice.last_error %}<div class="alert error"><svg class="icon"><use href="#i-alert"/></svg><div>{{ invoice.last_error }}</div></div>{% endif %}
+{% if invoice.network_wait_since and invoice.status == "QUEUED" %}<div class="alert warning"><svg class="icon"><use href="#i-cloud"/></svg><div><strong>À espera de ligação à AGT</strong> desde {{ invoice.network_wait_since|date:"d/m/Y H:i" }}. Será enviada automaticamente quando a ligação voltar{% if invoice.next_attempt_at %} (próxima tentativa {{ invoice.next_attempt_at|date:"H:i" }}){% endif %}.</div></div>
+{% elif invoice.last_error %}<div class="alert error"><svg class="icon"><use href="#i-alert"/></svg><div>{{ invoice.last_error }}</div></div>{% endif %}
 
 <div class="kpis" style="grid-template-columns:repeat(3,minmax(0,1fr))">
   <div class="card kpi"><div class="kpi-icon gray"><svg class="icon lg"><use href="#i-doc"/></svg></div><div><div class="kpi-value">{{ invoice.subtotal|floatformat:2 }}</div><div class="kpi-label">Subtotal ({{ invoice.currency }})</div></div></div>

@@ -50,7 +50,9 @@ class Scheduler(threading.Thread):
 
     def __init__(self, jobs: list[tuple[str, float, callable]], tick: float = 1.0):
         super().__init__(name="gateway-scheduler", daemon=True)
-        self.jobs = [[name, interval, fn, 0.0] for name, interval, fn in jobs]
+        # None = ainda não correu: corre logo ao arrancar (o relógio monótono conta desde que o
+        # Windows ligou, por isso comparar com 0 adiaria a primeira execução logo após o arranque).
+        self.jobs = [[name, interval, fn, None] for name, interval, fn in jobs]
         self.stop_event = threading.Event()
         self.tick = tick
         self.runs: dict[str, int] = {name: 0 for name, _, _ in jobs}
@@ -61,7 +63,7 @@ class Scheduler(threading.Thread):
             now = time.monotonic()
             for job in self.jobs:
                 name, interval, fn, last = job
-                if now - last >= interval:
+                if last is None or now - last >= interval:
                     job[3] = now
                     close_old_connections()
                     try:

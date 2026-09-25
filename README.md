@@ -26,9 +26,9 @@ de faturação: nunca escreve nas bases de dados de origem.
 
 ## Instalar no cliente
 
-Duplo clique em `install\Instalar Gateway Fiscal.cmd`: instala, arranca com o Windows e
-abre a **Configuração automática** (deteta a base de dados e liga-se, com autorização do
-cliente em cada passo). Guia completo em [docs/instalacao.md](docs/instalacao.md).
+Duplo clique em `GatewayFiscal-Setup-<versão>.exe` (Python incluído; construído com
+`install\construir_instalador.ps1`). Instala, arranca com o Windows e abre a
+**Configuração automática**. Guia completo em [docs/instalacao.md](docs/instalacao.md).
 
 ## Instalação para desenvolvimento
 

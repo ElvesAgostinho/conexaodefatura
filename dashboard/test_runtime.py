@@ -134,6 +134,18 @@ class SchedulerTests(TestCase):
         scheduler.join(2)
         self.assertEqual(len(calls), 1)
 
+    def test_runs_immediately_right_after_windows_boot(self):
+        # Regressão: com o Windows ligado há poucos segundos, o relógio monótono é pequeno e a
+        # primeira execução ficava adiada até ao fim do intervalo.
+        calls = []
+        scheduler = Scheduler([("x", 300, lambda: calls.append(1))], tick=0.01)
+        with mock.patch("dashboard.management.commands.run_gateway.time.monotonic", return_value=10.0):
+            scheduler.start()
+            time.sleep(0.2)
+            scheduler.stop()
+            scheduler.join(2)
+        self.assertEqual(len(calls), 1)
+
     def test_sync_job_skips_unmapped_and_reports(self):
         company = Company.objects.create(name="A", nif="1")
         DataSource.objects.create(company=company, code="SEM", name="sem mapeamento", kind="DATABASE",

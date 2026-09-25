@@ -1,6 +1,7 @@
 from django.db.models import Count
 
 from agt.models import AgtConfiguration
+from config.version import VERSION
 from companies.access import Role, companies_for_user, has_role
 from companies.models import Membership
 from invoices.models import STATUS_GROUPS, Invoice
@@ -23,4 +24,5 @@ def navigation(request):
         "nav_is_admin": has_role(user, company, Role.ADMIN),
         "nav_counts": counts,
         "nav_agt": AgtConfiguration.objects.filter(company=company).first(),
+        "gateway_version": VERSION,
     }

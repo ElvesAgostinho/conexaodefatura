@@ -125,30 +125,10 @@ try {
 
 # ------------------------------------------------------ 6. arranque automático
 $pythonw = Join-Path $Pasta ".venv\Scripts\pythonw.exe"
-$argumentos = "manage.py run_gateway --host * --port $Porta"
 if (-not $SemTarefa) {
-    Passo "A registar o arranque automático"
-    $existente = Get-ScheduledTask -TaskName $NomeTarefa -ErrorAction SilentlyContinue
-    if ($existente) {
-        Stop-ScheduledTask -TaskName $NomeTarefa -ErrorAction SilentlyContinue
-        Unregister-ScheduledTask -TaskName $NomeTarefa -Confirm:$false
-    }
-    $acao = New-ScheduledTaskAction -Execute $pythonw -Argument $argumentos -WorkingDirectory $Pasta
-    $definicoes = New-ScheduledTaskSettingsSet -AllowStartIfOnBatteries -DontStopIfGoingOnBatteries `
-        -RestartCount 999 -RestartInterval (New-TimeSpan -Minutes 1) -ExecutionTimeLimit (New-TimeSpan -Seconds 0) `
-        -StartWhenAvailable -MultipleInstances IgnoreNew
-    if (EAdministrador) {
-        $gatilho = New-ScheduledTaskTrigger -AtStartup
-        $principal = New-ScheduledTaskPrincipal -UserId "SYSTEM" -LogonType ServiceAccount -RunLevel Highest
-        Write-Host "Arranca com o Windows (conta SYSTEM), mesmo sem ninguém com sessão iniciada."
-    } else {
-        $gatilho = New-ScheduledTaskTrigger -AtLogOn -User "$env:USERDOMAIN\$env:USERNAME"
-        $principal = New-ScheduledTaskPrincipal -UserId "$env:USERDOMAIN\$env:USERNAME" -LogonType Interactive
-        Write-Host "Sem privilégios de administrador: arranca quando $env:USERNAME inicia sessão."
-    }
-    Register-ScheduledTask -TaskName $NomeTarefa -Action $acao -Trigger $gatilho -Settings $definicoes `
-        -Principal $principal -Description "Gateway Fiscal: painel, API e envio à AGT (porta $Porta)" | Out-Null
-    Start-ScheduledTask -TaskName $NomeTarefa
+    Passo "A registar o arranque automático e a aguardar o Gateway"
+    & powershell.exe -NoProfile -ExecutionPolicy Bypass -File (Join-Path $Pasta "install\tarefa.ps1") -Pasta $Pasta -Python $pythonw -Porta $Porta
+    if ($LASTEXITCODE -ne 0) { Falhar "O Gateway não arrancou. Veja $Pasta\logs\gateway.log" }
 }
 
 if ($AbrirFirewall) {
@@ -162,15 +142,6 @@ if ($AbrirFirewall) {
 
 # ---------------------------------------------------------------- pronto
 $url = "http://localhost:$Porta/configurar/"
-if (-not $SemTarefa) {
-    Passo "A aguardar o arranque do Gateway"
-    $ok = $false
-    for ($i = 0; $i -lt 60; $i++) {
-        try { $r = Invoke-WebRequest -Uri "http://127.0.0.1:$Porta/entrar/" -UseBasicParsing -TimeoutSec 2; if ($r.StatusCode -eq 200) { $ok = $true; break } } catch { }
-        Start-Sleep -Seconds 1
-    }
-    if (-not $ok) { Falhar "O Gateway não respondeu na porta $Porta. Veja $Pasta\logs\gateway.log" }
-}
 Write-Host ""
 Write-Host "Gateway Fiscal instalado em $Pasta" -ForegroundColor Green
 Write-Host "Painel: $url"

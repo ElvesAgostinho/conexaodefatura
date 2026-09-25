@@ -47,6 +47,17 @@ def select_company(request):
 # ------------------------------------------------------------------- início
 
 
+def _network_wait(invoices):
+    """Faturas à espera de ligação à AGT há mais de 1 hora (para o aviso da página inicial)."""
+    from datetime import timedelta
+
+    waiting = invoices.filter(status=InvoiceStatus.QUEUED, network_wait_since__isnull=False)
+    oldest = waiting.order_by("network_wait_since").values_list("network_wait_since", flat=True).first()
+    if oldest is None or oldest > timezone.now() - timedelta(hours=1):
+        return None
+    return {"count": waiting.count(), "since": oldest}
+
+
 def _greeting() -> str:
     hour = timezone.localtime().hour
     return "Bom dia" if hour < 12 else "Boa tarde" if hour < 19 else "Boa noite"
@@ -75,6 +86,7 @@ def home(request):
         "agt_missing": [] if config.is_simulation else config.missing_for_real_sending(),
         "queued": counts.get(InvoiceStatus.QUEUED, 0),
         "stuck": stuck_sending(company).count(),
+        "network_wait": _network_wait(invoices),
         "can_operate": can(request, Role.OPERATOR),
     })
 
