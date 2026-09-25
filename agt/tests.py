@@ -30,20 +30,16 @@ class AgtConfigurationTests(TestCase):
         self.assertEqual(AgtConfiguration.for_company(self.company).pk, config.pk)
         config.full_clean()
 
-    def test_real_environment_requires_only_url(self):
-        # O Gateway não emite faturas: o certificado é do software de faturação do cliente e é opcional.
-        config = AgtConfiguration(company=self.company, environment="PRODUCTION")
-        with self.assertRaises(ValidationError) as ctx:
-            config.full_clean()
-        self.assertEqual(set(ctx.exception.message_dict), {"base_url"})
-        AgtConfiguration(company=self.company, environment="PRODUCTION",
-                         base_url="https://exemplo.invalid/agt").full_clean()
-
-    def test_missing_list_speaks_of_client_credentials(self):
-        with mock.patch.dict(os.environ, {}, clear=True):
-            missing = AgtConfiguration(company=self.company, base_url="https://x.invalid").missing_for_real_sending()
-        self.assertFalse(any("certificado" in m for m in missing))
-        self.assertTrue(any("credencial do cliente AGT_CLIENT_SECRET" in m for m in missing))
+    def test_official_urls_by_environment(self):
+        # URLs da documentação oficial (Quiosque AGT); um endereço indicado à mão tem prioridade.
+        self.assertEqual(AgtConfiguration(environment="TEST").effective_base_url,
+                         "https://sifphml.minfin.gov.ao/sigt/fe/v1/")
+        self.assertEqual(AgtConfiguration(environment="PRODUCTION").effective_base_url,
+                         "https://sifp.minfin.gov.ao/sigt/fe/v1/")
+        self.assertEqual(AgtConfiguration(environment="SIMULATION").effective_base_url, "")
+        self.assertEqual(AgtConfiguration(environment="TEST", base_url="https://outro.invalid/").effective_base_url,
+                         "https://outro.invalid/")
+        AgtConfiguration(company=self.company, environment="PRODUCTION").full_clean()
 
     def test_https_only(self):
         config = AgtConfiguration(company=self.company, base_url="http://exemplo.invalid/api")
@@ -59,26 +55,23 @@ class AgtConfigurationTests(TestCase):
         with self.assertRaises(ValidationError):
             AgtConfiguration(company=self.company, credentials_prefix="x-1").full_clean()
 
-    def test_secrets_come_from_env_and_are_never_exposed(self):
-        config = AgtConfiguration(company=self.company, credentials_prefix="hotel2")
-        env = {"AGT_HOTEL2_CLIENT_SECRET": "s3cr3t", "AGT_CLIENT_SECRET": "outro"}
-        with mock.patch.dict(os.environ, env, clear=True):
-            status = config.secrets_status()
-            self.assertEqual(config.get_secret("CLIENT_SECRET"), "s3cr3t")
-        self.assertEqual(status, {"AGT_HOTEL2_CLIENT_SECRET": True, "AGT_HOTEL2_PRIVATE_KEY": False,
-                                  "AGT_HOTEL2_PRIVATE_KEY_PASSWORD": False})
-        self.assertNotIn("s3cr3t", str(status))
-        field_names = {f.name for f in AgtConfiguration._meta.get_fields()}
-        self.assertFalse(field_names & {"client_secret", "private_key", "password"})
+    def test_missing_for_real_sending_lists_each_credential(self):
+        missing = " ".join(AgtConfiguration(company=self.company, environment="TEST").missing_for_real_sending())
+        for text in ("utilizador e senha da API", "chave privada do contribuinte", "dados do software",
+                     "assinatura do software"):
+            self.assertIn(text, missing)
+        self.assertNotIn("endereço", missing)  # o endereço oficial é usado automaticamente
 
-    def test_default_prefix(self):
-        self.assertEqual(AgtConfiguration(company=self.company).secret_env_name("CLIENT_SECRET"), "AGT_CLIENT_SECRET")
-
-    def test_missing_for_real_sending(self):
-        with mock.patch.dict(os.environ, {}, clear=True):
-            missing = AgtConfiguration(company=self.company).missing_for_real_sending()
-        self.assertTrue(any("endereço" in m for m in missing))
-        self.assertTrue(any("AGT_CLIENT_SECRET" in m for m in missing))
+    def test_credentials_status_has_owner_and_no_values(self):
+        config = AgtConfiguration(company=self.company, api_username="produtor")
+        config.set_api_password("senha-api-secreta")
+        rows = {r["label"]: r for r in config.credentials_status()}
+        self.assertTrue(rows["Utilizador e senha da API"]["ok"])
+        self.assertIn("produtor", rows["Utilizador e senha da API"]["owner"])
+        self.assertIn("cliente", rows["Chave privada do contribuinte"]["owner"])
+        self.assertNotIn("senha-api-secreta", str(rows))
+        self.assertNotIn("senha-api-secreta", config.api_password_encrypted)
+        self.assertEqual(config.api_password(), "senha-api-secreta")
 
     def test_client_selection(self):
         self.assertIsInstance(client_for(AgtConfiguration(environment="SIMULATION")), SimulatedAgtClient)

@@ -8,12 +8,13 @@ que pode depois ser afinado à mão em JSON.
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from datetime import date
 
 from host_connector.catalog import TableRef, build_select
 from host_connector.connection import HostDatabase
 from invoices.canonical import CanonicalError, parse_document, validate_document
 
-from .mapping import cursor_value, row_value, rows_to_payload, validate_mapping
+from .mapping import cursor_value, query_params, row_value, rows_to_payload, validate_mapping
 
 HEADER_LABELS = {
     "source_document_id": "ID do documento na origem",
@@ -56,15 +57,26 @@ class AssistantChoices:
     cursor_type: str
     link_column: str                        # coluna das linhas que aponta para o documento
     batch_size: int = 200
+    start_date: date | None = None          # começar a partir desta data do documento
+    initial_cursor: str = ""                # ou a partir deste valor do cursor (ex.: ID interno)
+    document_types: list[str] = field(default_factory=list)  # só estes tipos (vazio = todos)
 
 
 def build_mapping(db: HostDatabase, choices: AssistantChoices, document_columns: set[str],
                   line_columns: set[str]) -> dict:
     header = {k: v for k, v in choices.header_columns.items() if v}
     lines = {k: v for k, v in choices.line_columns.items() if v}
+    conditions, filters = [], {}
+    if choices.start_date and header.get("document_date"):
+        conditions.append((header["document_date"], ">=", ["start_date"]))
+        filters["start_date"] = choices.start_date.isoformat()
+    if choices.document_types and header.get("document_type"):
+        names = [f"doc_type_{i}" for i in range(len(choices.document_types))]
+        conditions.append((header["document_type"], "IN", names))
+        filters["document_types"] = list(choices.document_types)
     documents_query = build_select(
         db, choices.documents_table, list(header.values()), choices.cursor_column, ">", "cursor",
-        choices.cursor_column, document_columns,
+        choices.cursor_column, document_columns, conditions,
     )
     lines_query = build_select(
         db, choices.lines_table, list(lines.values()), choices.link_column, "=", "document_id",
@@ -75,7 +87,9 @@ def build_mapping(db: HostDatabase, choices: AssistantChoices, document_columns:
         "lines_query": lines_query,
         "cursor_column": choices.cursor_column,
         "cursor_type": choices.cursor_type,
-        "initial_cursor": "0" if choices.cursor_type == "int" else ("1900-01-01T00:00:00" if choices.cursor_type == "datetime" else ""),
+        "initial_cursor": choices.initial_cursor or (
+            "0" if choices.cursor_type == "int" else ("1900-01-01T00:00:00" if choices.cursor_type == "datetime" else "")),
+        "filters": filters,
         "batch_size": choices.batch_size,
         "fields": header,
         "line_fields": lines,
@@ -104,7 +118,7 @@ def preview(db: HostDatabase, mapping: dict, limit: int = 3) -> list[PreviewItem
     if problems:
         return [PreviewItem("—", False, problems)]
     cursor = cursor_value(mapping, "")
-    rows = db.fetch_all(mapping["documents_query"], {"cursor": cursor}, max_rows=limit)
+    rows = db.fetch_all(mapping["documents_query"], query_params(mapping, cursor, db.config.engine), max_rows=limit)
     items = []
     id_column = mapping["fields"]["source_document_id"]
     for row in rows:

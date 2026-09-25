@@ -23,7 +23,8 @@ As consultas passam pela guarda de SQL (só leitura) e usam só parâmetros
 
 from __future__ import annotations
 
-from datetime import datetime
+import re
+from datetime import date, datetime
 from typing import Any
 
 from host_connector.sql_guard import ReadOnlyViolation, assert_read_only
@@ -32,7 +33,58 @@ from invoices.canonical import HEADER_FIELDS, LINE_FIELDS, REQUIRED_HEADER_FIELD
 CURSOR_TYPES = ("int", "str", "datetime")
 MAX_BATCH = 1000
 _KEYS = {"documents_query", "lines_query", "cursor_column", "cursor_type", "initial_cursor", "batch_size", "assistant",
+         "filters",
          "fields", "line_fields", "defaults", "line_defaults"}
+
+
+FILTER_TYPE_RE = re.compile(r"^[A-Za-z0-9/ .-]{1,20}$")
+MAX_FILTER_TYPES = 50
+
+
+def filter_params(mapping: dict) -> dict:
+    """Parâmetros dos filtros ("começar a partir de" e tipos de documento)."""
+    filters = mapping.get("filters") or {}
+    params = {}
+    if filters.get("start_date"):
+        params["start_date"] = date.fromisoformat(filters["start_date"])
+    for i, value in enumerate(filters.get("document_types") or []):
+        params[f"doc_type_{i}"] = value
+    return params
+
+
+def query_params(mapping: dict, cursor, engine: str = "") -> dict:
+    """Parâmetros da consulta de documentos: cursor + filtros."""
+    params = {"cursor": cursor, **filter_params(mapping)}
+    if engine == "sqlite" and "start_date" in params:
+        params["start_date"] = params["start_date"].isoformat()  # datas guardadas como texto
+    return params
+
+
+def _validate_filters(mapping: dict) -> list[str]:
+    filters = mapping.get("filters")
+    if filters in (None, {}):
+        return []
+    if not isinstance(filters, dict) or set(filters) - {"start_date", "document_types"}:
+        return ["filters: só são aceites start_date e document_types."]
+    errors = []
+    query = mapping.get("documents_query") or ""
+    if filters.get("start_date"):
+        try:
+            date.fromisoformat(str(filters["start_date"]))
+        except ValueError:
+            errors.append("filters.start_date: data inválida (AAAA-MM-DD).")
+        if ":start_date" not in query:
+            errors.append("documents_query: tem de usar :start_date (filtro por data).")
+    types = filters.get("document_types") or []
+    if not isinstance(types, list) or len(types) > MAX_FILTER_TYPES:
+        errors.append(f"filters.document_types: lista com até {MAX_FILTER_TYPES} tipos.")
+    else:
+        for i, value in enumerate(types):
+            if not isinstance(value, str) or not FILTER_TYPE_RE.match(value):
+                errors.append(f"filters.document_types: tipo inválido ({value!r}).")
+            elif f":doc_type_{i}" not in query:
+                errors.append(f"documents_query: tem de usar :doc_type_{i} (filtro por tipo).")
+    return errors
 
 
 def validate_mapping(mapping: Any) -> list[str]:
@@ -67,6 +119,7 @@ def validate_mapping(mapping: Any) -> list[str]:
     except ValueError as exc:
         errors.append(f"initial_cursor: {exc}")
 
+    errors += _validate_filters(mapping)
     if not isinstance(mapping.get("fields", {}), dict) or "source_document_id" not in mapping.get("fields", {}):
         errors.append("fields.source_document_id: tem de vir de uma coluna (é usado em :document_id).")
     errors += _check_fields(mapping, "fields", "defaults", HEADER_FIELDS, REQUIRED_HEADER_FIELDS)

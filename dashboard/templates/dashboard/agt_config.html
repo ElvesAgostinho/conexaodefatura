@@ -5,34 +5,69 @@
   <div>
     <div class="crumbs"><a href="{% url 'dashboard:home' %}">Início</a> › Configuração AGT</div>
     <h1>Configuração AGT</h1>
-    <div class="sub">Comunicação com a Administração Geral Tributária para {{ nav_company.name }}.</div>
+    <div class="sub">Comunicação com a Administração Geral Tributária (Facturação Electrónica) para {{ nav_company.name }}.</div>
   </div>
 </div>
 
 {% if config.is_simulation %}
-  <div class="alert warning"><svg class="icon"><use href="#i-info"/></svg><div>Modo <strong>simulação</strong>: os documentos são tratados como aceites, sem nada ser enviado à AGT.</div></div>
-{% else %}
-  <div class="alert error"><svg class="icon"><use href="#i-alert"/></svg><div>A comunicação real com a AGT só funciona depois de implementada a especificação técnica oficial.{% if missing %} Falta ainda: {{ missing|join:", " }}.{% endif %}</div></div>
+  <div class="alert warning"><svg class="icon"><use href="#i-info"/></svg><div>Modo <strong>simulação</strong>: as faturas são lidas e validadas, mas nada é enviado à AGT.</div></div>
+{% elif missing %}
+  <div class="alert error"><svg class="icon"><use href="#i-alert"/></svg><div>Para comunicar com a AGT falta ainda: {{ missing|join:"; " }}.</div></div>
 {% endif %}
 
-<form method="post">
+<section class="card" style="margin-bottom:1rem">
+  <div class="card-head"><h2>Estado das credenciais</h2><span class="hint">os valores nunca são mostrados</span></div>
+  <div class="table-wrap"><table>
+    <thead><tr><th>Credencial</th><th>De quem é</th><th>Estado</th></tr></thead>
+    <tbody>
+    {% for c in credentials %}
+      <tr><td><strong>{{ c.label }}</strong>{% if c.detail %}<span class="sub mono">{{ c.detail }}</span>{% endif %}</td>
+        <td>{{ c.owner }}</td>
+        <td>{% if c.ok %}<span class="pill ok"><svg class="icon sm"><use href="#i-lock"/></svg>guardada cifrada</span>{% else %}<span class="pill warn">em falta</span>{% endif %}</td></tr>
+    {% endfor %}
+    </tbody>
+  </table></div>
+</section>
+
+<form method="post" enctype="multipart/form-data" autocomplete="off">
   {% csrf_token %}
+  {% if form.non_field_errors %}<div class="alert error"><svg class="icon"><use href="#i-alert"/></svg><div>{{ form.non_field_errors|join:" " }}</div></div>{% endif %}
   <div class="grid g-2">
     <section class="card">
-      <div class="card-head"><h2>Ambiente e ligação</h2></div>
+      <div class="card-head"><h2>Ambiente e acesso à API</h2></div>
       <div class="card-body">
         {% include "dashboard/_field.html" with field=form.environment %}
         {% include "dashboard/_field.html" with field=form.base_url %}
-        {% include "dashboard/_field.html" with field=form.client_id %}
-        {% include "dashboard/_field.html" with field=form.credentials_prefix %}
+        <p class="help" style="margin-top:-.5rem">Homologação: <span class="mono">https://sifphml.minfin.gov.ao/sigt/fe/v1/</span><br>Produção: <span class="mono">https://sifp.minfin.gov.ao/sigt/fe/v1/</span></p>
+        {% include "dashboard/_field.html" with field=form.api_username %}
+        {% include "dashboard/_field.html" with field=form.api_password %}
+        <p class="help">Credenciais de acesso à API (Basic Authentication), atribuídas pela AGT ao produtor de software.</p>
       </div>
     </section>
     <section class="card">
-      <div class="card-head"><h2>Software de faturação do cliente</h2><span class="hint">quem emite as faturas</span></div>
+      <div class="card-head"><h2>Chave do contribuinte</h2><span class="hint">assina cada fatura</span></div>
       <div class="card-body">
-        {% include "dashboard/_field.html" with field=form.software_certificate_number %}
-        {% include "dashboard/_field.html" with field=form.software_name %}
-        {% include "dashboard/_field.html" with field=form.software_version %}
+        {% if config.issuer_key_info %}<div class="ok-box" style="margin-top:0"><svg class="icon"><use href="#i-lock"/></svg><div>Chave carregada: <span class="mono">{{ config.issuer_key_info }}</span></div></div>{% endif %}
+        {% include "dashboard/_field.html" with field=form.issuer_key_file %}
+        {% include "dashboard/_field.html" with field=form.issuer_key_password %}
+        {% if config.issuer_key_info %}{% include "dashboard/_field.html" with field=form.clear_issuer_key %}{% endif %}
+        <p class="help">A senha do ficheiro só é usada para o abrir e não é guardada. A chave fica cifrada.</p>
+      </div>
+    </section>
+    <section class="card">
+      <div class="card-head"><h2>Software de faturação</h2><span class="hint">quem emite as faturas (softwareInfo)</span></div>
+      <div class="card-body">
+        <div class="form-grid">
+          {% include "dashboard/_field.html" with field=form.software_name %}
+          {% include "dashboard/_field.html" with field=form.software_version %}
+          {% include "dashboard/_field.html" with field=form.software_certificate_number %}
+          {% include "dashboard/_field.html" with field=form.signature_version %}
+        </div>
+        {% include "dashboard/_field.html" with field=form.software_signature %}
+        {% if config.producer_key_info %}<div class="ok-box"><svg class="icon"><use href="#i-lock"/></svg><div>Chave do produtor carregada: <span class="mono">{{ config.producer_key_info }}</span></div></div>{% endif %}
+        {% include "dashboard/_field.html" with field=form.producer_key_file %}
+        {% include "dashboard/_field.html" with field=form.producer_key_password %}
+        {% if config.producer_key_info %}{% include "dashboard/_field.html" with field=form.clear_producer_key %}{% endif %}
       </div>
     </section>
     <section class="card">
@@ -45,17 +80,6 @@
         </div>
         {% include "dashboard/_field.html" with field=form.retry_delay_seconds %}
       </div>
-    </section>
-    <section class="card">
-      <div class="card-head"><h2>Credenciais da AGT do cliente</h2><span class="hint">ficheiro .env do servidor</span></div>
-      <div class="card-body">
-        <p class="help" style="margin-top:0">As credenciais são do <strong>contribuinte</strong>: o cliente obtém-nas junto da AGT e fornece-as para serem colocadas no ficheiro .env do servidor. Nunca são guardadas na base de dados nem mostradas aqui — indica-se apenas se estão definidas.</p>
-      </div>
-      <table><tbody>
-        {% for name, ok in secrets.items %}
-        <tr><td class="mono">{{ name }}</td><td class="num">{% if ok %}<span class="pill ok">definida</span>{% else %}<span class="pill warn">em falta</span>{% endif %}</td></tr>
-        {% endfor %}
-      </tbody></table>
     </section>
   </div>
   <div class="card mt">

@@ -139,7 +139,7 @@ class DatabaseConnectionPagesTests(DashboardTestCase):
                 "h_document_number": "Numero", "h_document_date": "Data", "h_customer_name": "Cliente",
                 "h_subtotal": "Base", "h_tax_amount": "Iva", "h_total": "Total", "hd_currency": "AOA",
                 "l_line_number": "Ord", "l_description": "Descr", "l_quantity": "Qtd", "l_unit_price": "Preco",
-                "l_tax_rate": "Taxa", "l_tax_amount": "Imposto", "l_total": "Valor", "action": action}
+                "l_tax_rate": "Taxa", "l_tax_amount": "Imposto", "l_total": "Valor", "document_types": ["FT"], "action": action}
         data.update(changes)
         return self.client.post(self.url("mapeamento/") + "?documents_table=Doc+Cab&lines_table=DocLin", data,
                                 follow=True)
@@ -290,3 +290,65 @@ class HomeChartTests(DashboardTestCase):
         page = self.client.get("/")
         self.assertEqual(page.context["nav_counts"]["pendentes"], 1)
         self.assertContains(page, "env-pill sim")
+
+
+class AssistantFilterPageTests(DashboardTestCase):
+    def setUp(self):
+        super().setUp()
+        from sources.test_filters import make_db
+
+        self.path, _ = make_db(self)
+        self.src = DataSource.objects.create(company=self.a, code="ERP", name="ERP", kind="DATABASE",
+                                             db_engine="sqlite", db_name=self.path)
+        self.login(self.admin)
+        self.url = f"/ligacoes/{self.src.pk}/mapeamento/?documents_table=Docs&lines_table=Linhas"
+
+    def post(self, action="save", **extra):
+        data = {"cursor_column": "Id", "cursor_type": "int", "link_column": "DocId", "batch_size": "200",
+                "h_source_document_id": "Id", "h_document_type": "Tipo", "h_series": "Serie",
+                "h_document_number": "Numero", "h_document_date": "Data", "h_customer_name": "Cliente",
+                "h_subtotal": "Base", "h_tax_amount": "Iva", "h_total": "Total", "hd_currency": "AOA",
+                "l_line_number": "Ord", "l_description": "Descr", "l_quantity": "Qtd", "l_unit_price": "Preco",
+                "l_tax_rate": "Taxa", "l_tax_amount": "Imposto", "l_total": "Valor", "action": action}
+        data.update(extra)
+        return self.client.post(self.url, data, follow=True)
+
+    def test_types_listed_with_counts_and_all_checked(self):
+        page = self.client.get(self.url)
+        self.assertContains(page, "5. O que importar")
+        self.assertContains(page, "FT (3)")
+        self.assertContains(page, "PP (1)")
+        self.assertEqual(sorted(page.context["form"].initial["document_types"]), ["FR", "FT", "NC", "OR", "PP"])
+
+    def test_all_checked_saves_no_filter(self):
+        self.post(document_types=["FT", "PP", "FR", "OR", "NC"])
+        self.src.refresh_from_db()
+        self.assertEqual(self.src.mapping["filters"], {})
+
+    def test_unchecking_types_and_start_date_saved_and_prefilled(self):
+        response = self.post(document_types=["FT", "FR", "NC"], start_date="2025-01-01")
+        self.assertContains(response, "Mapeamento guardado")
+        self.src.refresh_from_db()
+        self.assertEqual(self.src.mapping["filters"], {"start_date": "2025-01-01", "document_types": ["FT", "FR", "NC"]})
+        page = self.client.get(f"/ligacoes/{self.src.pk}/mapeamento/")
+        self.assertEqual(sorted(page.context["form"].initial["document_types"]), ["FR", "FT", "NC"])
+        self.assertEqual(page.context["form"].initial["start_date"], "2025-01-01")
+        sync = self.client.post(f"/ligacoes/{self.src.pk}/sincronizar/", follow=True)
+        self.assertContains(sync, "4 novos")
+
+    def test_validation(self):
+        response = self.post(document_types=[])
+        self.assertContains(response, "Escolha pelo menos um tipo")
+        response = self.post(document_types=["FT"], start_after="abc")
+        self.assertContains(response, "indique um número")
+        response = self.post(document_types=["XX"])
+        self.assertIn("document_types", response.context["form"].errors)
+        self.src.refresh_from_db()
+        self.assertEqual(self.src.mapping, {})
+
+    def test_start_after_id(self):
+        self.post(document_types=["FT", "PP", "FR", "OR", "NC"], start_after="5")
+        self.src.refresh_from_db()
+        self.assertEqual(self.src.mapping["initial_cursor"], "5")
+        sync = self.client.post(f"/ligacoes/{self.src.pk}/sincronizar/", follow=True)
+        self.assertContains(sync, "2 novos")

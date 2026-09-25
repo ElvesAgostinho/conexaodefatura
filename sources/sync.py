@@ -19,7 +19,7 @@ from host_connector.connection import HostDatabase
 from invoices.canonical import CanonicalError
 from invoices.services import DocumentConflict, import_document
 
-from .mapping import cursor_to_text, cursor_value, row_value, rows_to_payload, validate_mapping
+from .mapping import cursor_to_text, cursor_value, query_params, row_value, rows_to_payload, validate_mapping
 from .models import DataSource
 
 
@@ -102,7 +102,7 @@ def _run(source: DataSource, db: HostDatabase, result: SyncResult) -> None:
     cursor = cursor_value(mapping, source.sync_cursor)
     result.cursor = cursor_to_text(cursor)
     id_column = mapping["fields"]["source_document_id"]
-    rows = db.fetch_all(mapping["documents_query"], {"cursor": cursor},
+    rows = db.fetch_all(mapping["documents_query"], query_params(mapping, cursor, db.config.engine),
                         max_rows=mapping.get("batch_size", 200))
     for row in rows:
         result.fetched += 1

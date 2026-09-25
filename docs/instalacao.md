@@ -26,6 +26,21 @@
 A partir daí o Gateway lê as faturas novas a cada 5 minutos e trata da fila de envio. Se a
 internet falhar, as faturas ficam à espera e são enviadas quando a ligação voltar.
 
+### Credenciais da AGT (no painel, sem mexer em pastas)
+
+Em **Configuração AGT** escolha o ambiente (homologação ou produção: o endereço oficial é
+preenchido sozinho) e carregue:
+
+| Credencial | De quem é | Como se carrega |
+|---|---|---|
+| Utilizador e senha da API | atribuídos pela AGT ao **produtor do software** de faturação | escritos no painel |
+| Chave privada do contribuinte | do **cliente** (gerada pela AGT, portal do contribuinte) | ficheiro `.pem`, `.key`, `.pfx` ou `.p12` |
+| Dados e assinatura do software | do **produtor do software** de faturação | escritos/colados no painel, ou a chave do produtor |
+
+Tudo fica **cifrado** na base de dados e nunca volta a ser mostrado; a senha do ficheiro da
+chave só serve para o abrir e não é guardada. A tabela "Estado das credenciais" diz o que falta.
+Guarde uma cópia do `.env`: sem a `GATEWAY_ENCRYPTION_KEY` as credenciais não podem ser lidas.
+
 ### Instalação sem perguntas (técnicos, instalação em massa)
 
 ```bat

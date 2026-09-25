@@ -77,7 +77,8 @@ class DataSource(models.Model):
     db_password_encrypted = models.TextField(blank=True, editable=False)
     db_url_encrypted = models.TextField(blank=True, editable=False)
     db_odbc_driver = models.CharField("driver ODBC", max_length=100, blank=True,
-                                      help_text="Só SQL Server. Vazio = ODBC Driver 18 for SQL Server.")
+                                      help_text="Só SQL Server. Vazio = o melhor instalado neste computador "
+                                                "(ODBC Driver 18, senão 17).")
     db_trust_server_certificate = models.BooleanField(
         "confiar no certificado do servidor", default=False,
         help_text="Só SQL Server com certificado próprio (autoassinado).")

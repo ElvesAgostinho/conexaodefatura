@@ -129,13 +129,24 @@ class MappingAssistantForm(forms.Form):
         label="Coluna das linhas que indica o documento",
         help_text="Tem o mesmo valor que o 'ID do documento na origem'.")
     batch_size = forms.IntegerField(label="Documentos por sincronização", min_value=1, max_value=1000, initial=200)
+    start_date = forms.DateField(
+        label="Começar a partir da data", required=False, widget=forms.DateInput(attrs={"type": "date"}),
+        help_text="Só importa documentos com esta data ou mais recentes (evita importar anos de histórico).")
+    start_after = forms.CharField(
+        label="ou começar depois do ID interno", required=False, max_length=100,
+        help_text="Valor da coluna crescente a partir do qual começar (ex.: o ID da última fatura já tratada).")
+    document_types = forms.MultipleChoiceField(
+        label="Tipos de documento a importar", required=False, widget=forms.CheckboxSelectMultiple,
+        help_text="Desmarque os que não são faturas (ex.: pró-formas, orçamentos). Todos marcados = sem filtro.")
 
     REQUIRED_HEADER = {"source_document_id", "document_type", "series", "document_number", "document_date",
                        "customer_name", "subtotal", "tax_amount", "total"}
     REQUIRED_LINE = {"description", "quantity", "unit_price", "tax_rate", "tax_amount", "total"}
 
-    def __init__(self, *args, document_columns, line_columns, **kwargs):
+    def __init__(self, *args, document_columns, line_columns, type_choices=None, **kwargs):
         super().__init__(*args, **kwargs)
+        self.type_values = [value for value, _ in (type_choices or [])]
+        self.fields["document_types"].choices = [(v, f"{v} ({n})") for v, n in (type_choices or [])]
         doc_choices = [("", "— não existe —")] + [(c, c) for c in document_columns]
         line_choices = [("", "— não existe —")] + [(c, c) for c in line_columns]
         self.fields["cursor_column"].choices = doc_choices[1:]
@@ -158,6 +169,15 @@ class MappingAssistantForm(forms.Form):
 
     def clean(self):
         data = super().clean()
+        start_after = (data.get("start_after") or "").strip()
+        data["start_after"] = start_after
+        if start_after and data.get("cursor_type") == "int" and not start_after.lstrip("-").isdigit():
+            self.add_error("start_after", "A coluna crescente é numérica: indique um número.")
+        if self.type_values and not data.get("document_types") and self.is_bound:
+            self.add_error("document_types", "Escolha pelo menos um tipo de documento.")
+        # Todos marcados = sem filtro (um tipo novo no sistema de faturação não fica excluído).
+        if set(data.get("document_types") or []) >= set(self.type_values):
+            data["document_types"] = []
         if not data.get("h_source_document_id"):
             self.add_error("h_source_document_id", "Obrigatório: tem de vir de uma coluna.")
         for name in self.REQUIRED_HEADER - {"source_document_id"}:
@@ -179,12 +199,18 @@ class MappingAssistantForm(forms.Form):
 
     @classmethod
     def initial_from_mapping(cls, mapping: dict) -> dict:
+        filters = mapping.get("filters") or {}
+        start_after = str(mapping.get("initial_cursor", "") or "")
         initial = {
             "cursor_column": mapping.get("cursor_column", ""),
             "cursor_type": mapping.get("cursor_type", "int"),
             "batch_size": mapping.get("batch_size", 200),
             "link_column": mapping.get("assistant", {}).get("link_column", ""),
+            "start_date": filters.get("start_date") or None,
+            "start_after": "" if start_after in ("0", "", "1900-01-01T00:00:00") else start_after,
         }
+        if filters.get("document_types"):
+            initial["document_types"] = list(filters["document_types"])
         for name, column in mapping.get("fields", {}).items():
             initial[f"h_{name}"] = column
         for name, value in mapping.get("defaults", {}).items():
@@ -197,13 +223,55 @@ class MappingAssistantForm(forms.Form):
 
 
 class AgtConfigurationForm(forms.ModelForm):
+    """Configuração AGT. Senha e chaves são só de escrita: nunca voltam a ser mostradas."""
+
+    api_password = forms.CharField(
+        label="Senha da API", required=False, strip=False,
+        widget=forms.PasswordInput(render_value=False, attrs={"autocomplete": "new-password"}),
+        help_text="Guardada cifrada. Deixe vazio para manter a senha já guardada.")
+    issuer_key_file = forms.FileField(
+        label="Chave privada do contribuinte (ficheiro .pem, .key, .pfx ou .p12)", required=False,
+        help_text="Gerada pela AGT e obtida pelo cliente no portal do contribuinte.")
+    issuer_key_password = forms.CharField(label="Senha do ficheiro da chave (se tiver)", required=False, strip=False,
+                                          widget=forms.PasswordInput(render_value=False))
+    clear_issuer_key = forms.BooleanField(label="Apagar a chave do contribuinte guardada", required=False)
+    producer_key_file = forms.FileField(
+        label="Chave privada do produtor (opcional)", required=False,
+        help_text="Só se o produtor do software de faturação a fornecer. Em alternativa, cole a assinatura acima.")
+    producer_key_password = forms.CharField(label="Senha do ficheiro da chave do produtor (se tiver)",
+                                            required=False, strip=False,
+                                            widget=forms.PasswordInput(render_value=False))
+    clear_producer_key = forms.BooleanField(label="Apagar a chave do produtor guardada", required=False)
+
     class Meta:
         model = AgtConfiguration
         fields = [
-            "environment", "base_url", "software_certificate_number", "software_name", "software_version",
-            "client_id", "credentials_prefix", "auto_send", "timeout_seconds", "max_attempts",
-            "retry_delay_seconds",
+            "environment", "base_url", "api_username", "software_name", "software_version",
+            "software_certificate_number", "signature_version", "software_signature", "auto_send",
+            "timeout_seconds", "max_attempts", "retry_delay_seconds",
         ]
+        widgets = {"software_signature": forms.Textarea(attrs={"rows": 3, "class": "mono", "spellcheck": "false"})}
+
+    def clean(self):
+        from agt.keys import KeyFileError, load_private_key
+
+        data = super().clean()
+        if data.get("api_password"):
+            self.instance.set_api_password(data["api_password"])
+        for kind in ("issuer", "producer"):
+            upload = data.get(f"{kind}_key_file")
+            if data.get(f"clear_{kind}_key"):
+                self.instance.clear_key(kind)
+            elif upload:
+                try:
+                    self.instance.set_key(kind, load_private_key(upload.read(), data.get(f"{kind}_key_password") or ""))
+                except KeyFileError as exc:
+                    self.add_error(f"{kind}_key_file", str(exc))
+        signature = (data.get("software_signature") or "").strip()
+        if signature and signature.count(".") != 2:
+            self.add_error("software_signature", "Não parece uma assinatura JWS (três partes separadas por pontos).")
+        data["software_signature"] = signature
+        return data
 
 
 class ApiKeyForm(forms.Form):

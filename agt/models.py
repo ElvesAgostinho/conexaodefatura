@@ -36,16 +36,30 @@ class AgtConfiguration(models.Model):
     environment = models.CharField("ambiente", max_length=12, choices=Environment.choices,
                                    default=Environment.SIMULATION)
     base_url = models.URLField(
-        "endereço do serviço AGT", blank=True,
-        help_text="Endereço oficial indicado pela AGT para o ambiente escolhido (https).",
+        "endereço dos serviços AGT", blank=True,
+        help_text="Vazio = o endereço oficial do ambiente escolhido (homologação ou produção).",
     )
+    # --- Acesso à API (Basic Authentication; credenciais atribuídas pela AGT ao produtor de software)
+    api_username = models.CharField("utilizador da API", max_length=200, blank=True)
+    api_password_encrypted = models.TextField(blank=True, editable=False)
+    # --- Chave do contribuinte (emissor): assina cada fatura (jwsDocumentSignature)
+    issuer_key_encrypted = models.TextField(blank=True, editable=False)
+    issuer_key_info = models.CharField(max_length=120, blank=True, editable=False)
+    # --- Software de faturação (softwareInfo): jwsSoftwareSignature feita com a chave do produtor
+    signature_version = models.PositiveIntegerField(
+        "versão da assinatura do software (signatureVersion)", null=True, blank=True)
+    software_signature = models.TextField(
+        "assinatura do software (jwsSoftwareSignature)", blank=True,
+        help_text="Fornecida pelo produtor do software de faturação. Em alternativa, carregue a chave do produtor.")
+    producer_key_encrypted = models.TextField(blank=True, editable=False)
+    producer_key_info = models.CharField(max_length=120, blank=True, editable=False)
     # Dados do software que EMITE as faturas (o sistema de faturação do cliente), se a AGT os pedir.
     software_certificate_number = models.CharField(
-        "n.º de certificado do software de faturação", max_length=50, blank=True,
+        "n.º de certificação do software (softwareValidationNumber)", max_length=50, blank=True,
         help_text="Certificado AGT do programa que emite as faturas (ex.: HOST). Fornecido pelo cliente ou "
                   "pelo fornecedor desse programa. O Gateway não emite faturas.")
-    software_name = models.CharField("nome do software de faturação", max_length=100, blank=True)
-    software_version = models.CharField("versão do software de faturação", max_length=30, blank=True)
+    software_name = models.CharField("nome do software (productId)", max_length=100, blank=True)
+    software_version = models.CharField("versão do software (productVersion)", max_length=30, blank=True)
     client_id = models.CharField("client ID", max_length=200, blank=True)
     credentials_prefix = models.CharField(
         "prefixo das credenciais", max_length=30, blank=True, validators=[validate_credentials_prefix],
@@ -94,21 +108,80 @@ class AgtConfiguration(models.Model):
     def get_secret(self, name: str) -> str | None:
         return os.environ.get(self.secret_env_name(name)) or None
 
+    # URLs oficiais (documentação da AGT, Quiosque AGT › Facturação Electrónica).
+    OFFICIAL_URLS = {
+        Environment.TEST: "https://sifphml.minfin.gov.ao/sigt/fe/v1/",
+        Environment.PRODUCTION: "https://sifp.minfin.gov.ao/sigt/fe/v1/",
+    }
+
+    @property
+    def effective_base_url(self) -> str:
+        return self.base_url or self.OFFICIAL_URLS.get(self.environment, "")
+
+    # ------------------------------------------------ credenciais (cifradas)
+
+    def set_api_password(self, raw: str) -> None:
+        from config.crypto import encrypt
+
+        self.api_password_encrypted = encrypt(raw)
+
+    def api_password(self) -> str:
+        from config.crypto import decrypt
+
+        return decrypt(self.api_password_encrypted)
+
+    def set_key(self, kind: str, loaded) -> None:
+        from config.crypto import encrypt
+
+        setattr(self, f"{kind}_key_encrypted", encrypt(loaded.pem))
+        setattr(self, f"{kind}_key_info", loaded.info)
+
+    def clear_key(self, kind: str) -> None:
+        setattr(self, f"{kind}_key_encrypted", "")
+        setattr(self, f"{kind}_key_info", "")
+
+    def private_key(self, kind: str):
+        """Chave privada RSA carregada no painel ('issuer' ou 'producer'), ou None."""
+        from config.crypto import decrypt
+
+        from .keys import private_key_from_pem
+
+        token = getattr(self, f"{kind}_key_encrypted")
+        return private_key_from_pem(decrypt(token)) if token else None
+
+    def credentials_status(self) -> list[dict]:
+        """O que está configurado, sem revelar valores (para o painel)."""
+        return [
+            {"label": "Utilizador e senha da API", "owner": "produtor do software (atribuídos pela AGT)",
+             "ok": bool(self.api_username and self.api_password_encrypted),
+             "detail": self.api_username or ""},
+            {"label": "Chave privada do contribuinte", "owner": "cliente (gerada pela AGT, portal do contribuinte)",
+             "ok": bool(self.issuer_key_encrypted), "detail": self.issuer_key_info},
+            {"label": "Assinatura do software", "owner": "produtor do software de faturação",
+             "ok": bool(self.software_signature or self.producer_key_encrypted),
+             "detail": self.producer_key_info or ("assinatura fornecida" if self.software_signature else "")},
+        ]
+
     def clean(self):
         errors = {}
         if self.base_url and not self.base_url.lower().startswith("https://"):
             errors["base_url"] = "Tem de usar https://."
-        if not self.is_simulation:
-            if not self.base_url:
-                errors["base_url"] = "Obrigatório fora do modo simulação."
+
         if errors:
             raise ValidationError(errors)
 
     def missing_for_real_sending(self) -> list[str]:
         """O que falta para poder comunicar de verdade (mostrado no painel)."""
         missing = []
-        if not self.base_url:
-            missing.append("endereço do serviço AGT")
-        missing += [f"credencial do cliente {name} no .env" for name, ok in self.secrets_status().items()
-                    if not ok and not name.endswith("PRIVATE_KEY_PASSWORD")]
+        if not self.effective_base_url:
+            missing.append("endereço dos serviços AGT")
+        if not (self.api_username and self.api_password_encrypted):
+            missing.append("utilizador e senha da API")
+        if not self.issuer_key_encrypted:
+            missing.append("chave privada do contribuinte")
+        if not (self.software_name and self.software_version and self.software_certificate_number
+                and self.signature_version):
+            missing.append("dados do software de faturação (nome, versão, n.º de certificação, versão da assinatura)")
+        if not (self.software_signature or self.producer_key_encrypted):
+            missing.append("assinatura do software (ou chave do produtor)")
         return missing

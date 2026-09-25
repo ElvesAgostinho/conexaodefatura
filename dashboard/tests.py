@@ -207,25 +207,23 @@ class InvoiceViewTests(DashboardTestCase):
 
 class AgtViewTests(DashboardTestCase):
     def form_data(self, **changes):
-        data = {"environment": "SIMULATION", "base_url": "", "software_certificate_number": "", "software_name": "",
-                "software_version": "", "client_id": "", "credentials_prefix": "", "timeout_seconds": 30,
-                "max_attempts": 5, "retry_delay_seconds": 300}
+        data = {"environment": "SIMULATION", "base_url": "", "api_username": "", "software_name": "",
+                "software_version": "", "software_certificate_number": "", "signature_version": "",
+                "software_signature": "", "timeout_seconds": 30, "max_attempts": 5, "retry_delay_seconds": 300}
         data.update(changes)
         return data
 
     def test_admin_edits(self):
         self.login(self.admin)
-        response = self.client.post("/agt/", self.form_data(auto_send="on", software_name="Gateway"))
+        response = self.client.post("/agt/", self.form_data(auto_send="on", software_name="HOST"))
         self.assertRedirects(response, "/agt/")
         config = AgtConfiguration.objects.get(company=self.a)
         self.assertTrue(config.auto_send)
         self.assertEqual(config.updated_by, self.admin)
         self.assertTrue(AuditEvent.objects.filter(action="AGT_CONFIG_UPDATED").exists())
 
-    def test_production_requires_fields(self):
+    def test_https_only(self):
         self.login(self.admin)
-        response = self.client.post("/agt/", self.form_data(environment="PRODUCTION"))
-        self.assertContains(response, "Obrigatório fora do modo simulação")
         response = self.client.post("/agt/", self.form_data(base_url="http://inseguro.example/"))
         self.assertContains(response, "https://")
 
@@ -236,13 +234,12 @@ class AgtViewTests(DashboardTestCase):
         self.client.post("/agt/", self.form_data(auto_send="on"))
         self.assertFalse(AgtConfiguration.objects.get(company=self.a).auto_send)
 
-    def test_secrets_status_never_values(self):
+    def test_page_explains_owners_and_hides_values(self):
         self.login(self.admin)
-        with mock.patch.dict(os.environ, {"AGT_CLIENT_SECRET": "valor-muito-secreto"}):
-            response = self.client.get("/agt/")
-        self.assertContains(response, "AGT_CLIENT_SECRET")
-        self.assertContains(response, "definida")
-        self.assertNotContains(response, "valor-muito-secreto")
+        page = self.client.get("/agt/")
+        for text in ("Estado das credenciais", "produtor do software", "portal do contribuinte",
+                     "https://sifphml.minfin.gov.ao/sigt/fe/v1/", 'enctype="multipart/form-data"'):
+            self.assertContains(page, text)
 
 
 class ApiKeyViewTests(DashboardTestCase):

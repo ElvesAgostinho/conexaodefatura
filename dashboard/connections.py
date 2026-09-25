@@ -12,12 +12,13 @@ from django.views.decorators.http import require_POST
 from audit.services import audit_event
 from companies.access import Role
 from companies.models import ApiKey
-from host_connector.catalog import CatalogError, list_tables, resolve_table, sample_rows, table_columns
+from host_connector.catalog import (CatalogError, distinct_values, list_tables, resolve_table, sample_rows,
+                                    table_columns)
 from host_connector.config import HostConfigError
 from invoices.canonical import HEADER_FIELDS
 from invoices.testing import VALID_DOCUMENT
 from sources.assistant import AssistantChoices, build_mapping, preview
-from sources.autodetect import suggest
+from sources.autodetect import HEADER_SYNONYMS, LINE_SYNONYMS, match_columns, suggest
 from sources.mapping import validate_mapping
 from sources.models import DataSource
 from sources.sync import SyncError, database_for, sync_source
@@ -268,9 +269,22 @@ def connection_mapping(request, pk):
             elif same_tables and source.mapping:
                 initial = MappingAssistantForm.initial_from_mapping(source.mapping)
             else:
-                initial = {}
+                # Tabelas escolhidas à mão: sugere as colunas a partir da estrutura dessas tabelas.
+                picked = suggest(db, [doc_ref, line_ref])
+                if picked.documents_table == doc_ref and picked.lines_table == line_ref:
+                    initial = picked.initial()
+                else:
+                    initial = {f"h_{k}": v for k, v in match_columns(doc_cols, HEADER_SYNONYMS).items()}
+                    initial.update({f"l_{k}": v for k, v in match_columns(line_cols, LINE_SYNONYMS).items()})
+            # Tipos de documento que existem de facto na tabela (com contagem), para escolher.
+            type_column = (request.POST.get("h_document_type") if request.method == "POST"
+                           else initial.get("h_document_type"))
+            type_choices = []
+            if type_column in doc_cols:
+                type_choices = distinct_values(db, doc_ref, type_column)
+                initial.setdefault("document_types", [v for v, _ in type_choices])
             form = MappingAssistantForm(request.POST or None, document_columns=doc_cols, line_columns=line_cols,
-                                        initial=initial)
+                                        initial=initial, type_choices=type_choices)
             context.update({"form": form, "doc_ref": doc_ref, "line_ref": line_ref})
             if request.method == "POST" and form.is_valid():
                 header, header_defaults, lines, line_defaults = form.split()
@@ -279,6 +293,8 @@ def connection_mapping(request, pk):
                     header_defaults=header_defaults, line_columns=lines, line_defaults=line_defaults,
                     cursor_column=form.cleaned_data["cursor_column"], cursor_type=form.cleaned_data["cursor_type"],
                     link_column=form.cleaned_data["link_column"], batch_size=form.cleaned_data["batch_size"],
+                    start_date=form.cleaned_data.get("start_date"), initial_cursor=form.cleaned_data["start_after"],
+                    document_types=form.cleaned_data["document_types"],
                 ), set(doc_cols), set(line_cols))
                 if request.POST.get("action") == "save":
                     problems = validate_mapping(mapping)

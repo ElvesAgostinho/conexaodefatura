@@ -61,6 +61,45 @@ class HostConfigError(ValueError):
     """Configuração do HOST em falta ou inválida."""
 
 
+# Drivers ODBC do SQL Server suportados, por ordem de preferência (o mais recente primeiro).
+# O antigo "SQL Server" do Windows e o Native Client ficam de fora: não suportam TLS 1.2 de
+# forma fiável e dão erros enganadores ("o SQL Server não existe").
+ODBC_DRIVER_PREFERENCE = (
+    "ODBC Driver 18 for SQL Server",
+    "ODBC Driver 17 for SQL Server",
+)
+MISSING_DRIVER_MESSAGE = (
+    "Falta o \"ODBC Driver 18 for SQL Server\" neste computador. Instale-o (gratuito, site da Microsoft) "
+    "e tente de novo."
+)
+
+
+def installed_odbc_drivers() -> list[str]:
+    try:
+        import pyodbc
+    except ImportError:
+        return []
+    try:
+        return list(pyodbc.drivers())
+    except Exception:  # noqa: BLE001 - gestor ODBC indisponível
+        return []
+
+
+def best_odbc_driver() -> str:
+    """Melhor driver do SQL Server instalado neste computador (18, senão 17).
+
+    Se a lista de drivers é conhecida e nenhum serve, lança HostConfigError com o que
+    instalar. Se não é possível saber (sem gestor ODBC), assume o 18.
+    """
+    installed = installed_odbc_drivers()
+    for name in ODBC_DRIVER_PREFERENCE:
+        if name in installed:
+            return name
+    if installed:
+        raise HostConfigError(MISSING_DRIVER_MESSAGE)
+    return ODBC_DRIVER_PREFERENCE[0]
+
+
 def env_prefix(connection: str | None = DEFAULT_CONNECTION) -> str:
     """Prefixo das variáveis de uma ligação: "HOST_DB_" ou "HOST_<NOME>_DB_"."""
     connection = (connection or DEFAULT_CONNECTION).strip()
@@ -106,7 +145,7 @@ class HostConnectionConfig:
     name: str | None = None
     user: str | None = None
     password: str | None = field(default=None, repr=False)
-    odbc_driver: str = "ODBC Driver 18 for SQL Server"
+    odbc_driver: str = ""  # vazio = escolhido automaticamente (best_odbc_driver)
     trust_server_certificate: bool = False
     connect_timeout: int = 10
     options: dict[str, str] = field(default_factory=dict)
@@ -144,7 +183,7 @@ class HostConnectionConfig:
             name=_get(f"{p}NAME"),
             user=_get(f"{p}USER"),
             password=os.environ.get(f"{p}PASSWORD") or None,
-            odbc_driver=_get(f"{p}ODBC_DRIVER", "ODBC Driver 18 for SQL Server"),
+            odbc_driver=_get(f"{p}ODBC_DRIVER") or "",
             trust_server_certificate=_get_bool(f"{p}TRUST_SERVER_CERTIFICATE", False),
             connect_timeout=timeout,
             options=_parse_options(_get(f"{p}OPTIONS"), f"{p}OPTIONS"),
@@ -184,7 +223,7 @@ class HostConnectionConfig:
             name=(name or "").strip() or None,
             user=(user or "").strip() or None,
             password=password or None,
-            odbc_driver=(odbc_driver or "").strip() or "ODBC Driver 18 for SQL Server",
+            odbc_driver=(odbc_driver or "").strip(),
             trust_server_certificate=bool(trust_server_certificate),
             connect_timeout=connect_timeout,
             options=_parse_options(options, "Opções"),
@@ -229,7 +268,7 @@ class HostConnectionConfig:
         query = dict(self.options)
         database = self.name
         if self.engine == "mssql":
-            query.setdefault("driver", self.odbc_driver)
+            query.setdefault("driver", self.odbc_driver or best_odbc_driver())
             # Em clusters Always On encaminha para uma réplica de leitura.
             query.setdefault("ApplicationIntent", "ReadOnly")
             if self.trust_server_certificate:
@@ -256,10 +295,13 @@ class HostConnectionConfig:
             location = self.name
         else:
             # mask_secrets cobre senhas escondidas na querystring (ex.: odbc_connect=...PWD=...).
-            location = mask_secrets(
-                self.sqlalchemy_url().render_as_string(hide_password=True),
-                extra_secrets=(self.password,) if self.password else (),
-            )
+            try:
+                location = mask_secrets(
+                    self.sqlalchemy_url().render_as_string(hide_password=True),
+                    extra_secrets=(self.password,) if self.password else (),
+                )
+            except HostConfigError as exc:  # ex.: driver ODBC em falta
+                location = str(exc)
         return {
             "engine": self.engine,
             "host": self.host,

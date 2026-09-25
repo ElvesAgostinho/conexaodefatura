@@ -11,7 +11,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from sqlalchemy import MetaData, Table, inspect, select
+import re
+
+from sqlalchemy import MetaData, Table, func, inspect, select
 
 from .connection import HostDatabase
 from .diagnostic_queries import DEFAULT_SCHEMA_ONLY, SYSTEM_SCHEMAS
@@ -121,22 +123,48 @@ def quote_column(db: HostDatabase, column: str) -> str:
     return db.engine.dialect.identifier_preparer.quote(column)
 
 
-def build_select(db: HostDatabase, ref: TableRef, columns: list[str], where_column: str, operator: str,
-                 param: str, order_by: str | None, available: set[str]) -> str:
-    """SELECT <colunas> FROM <tabela> WHERE <coluna> <op> :param ORDER BY <coluna>.
+_PARAM_RE = re.compile(r"^[a-z][a-z0-9_]{0,40}$")
 
-    Todas as colunas têm de existir em `available` (colunas reais da tabela).
+
+def build_select(db: HostDatabase, ref: TableRef, columns: list[str], where_column: str, operator: str,
+                 param: str, order_by: str | None, available: set[str],
+                 conditions: list[tuple[str, str, list[str]]] | None = None) -> str:
+    """SELECT <colunas> FROM <tabela> WHERE <coluna> <op> :param [AND ...] ORDER BY <coluna>.
+
+    `conditions`: filtros extra (coluna, ">=" ou "IN", nomes dos parâmetros). Todas as colunas
+    têm de existir em `available` (colunas reais da tabela); os valores vão sempre em parâmetros.
     """
     if operator not in (">", "="):
         raise CatalogError("Operador inválido.")
+    conditions = conditions or []
     wanted = list(dict.fromkeys([*columns, where_column, *([order_by] if order_by else [])]))
-    unknown = [c for c in wanted if c not in available]
+    unknown = [c for c in [*wanted, *(c[0] for c in conditions)] if c not in available]
     if unknown:
-        raise CatalogError(f"Colunas inexistentes em {ref.qualified}: {', '.join(unknown)}.")
+        raise CatalogError(f"Colunas inexistentes em {ref.qualified}: {', '.join(dict.fromkeys(unknown))}.")
+    where = [f"{quote_column(db, where_column)} {operator} :{param}"]
+    for column, op, names in conditions:
+        if op not in (">=", "IN") or not names or not all(_PARAM_RE.match(n) for n in [*names, param]):
+            raise CatalogError("Filtro inválido.")
+        if op == ">=":
+            where.append(f"{quote_column(db, column)} >= :{names[0]}")
+        else:
+            where.append(f"{quote_column(db, column)} IN ({', '.join(':' + n for n in names)})")
     sql = (
         f"SELECT {', '.join(quote_column(db, c) for c in wanted)} FROM {quote_table(db, ref)} "
-        f"WHERE {quote_column(db, where_column)} {operator} :{param}"
+        f"WHERE {' AND '.join(where)}"
         + (f" ORDER BY {quote_column(db, order_by)}" if order_by else "")
     )
     assert_read_only(sql)
     return sql
+
+
+def distinct_values(db: HostDatabase, ref: TableRef, column: str, limit: int = 50) -> list[tuple[str, int]]:
+    """Valores diferentes de uma coluna e quantas vezes aparecem (ex.: tipos de documento)."""
+    with db.connect() as conn:
+        table = _reflect(conn, ref)
+        if column not in table.c:
+            raise CatalogError(f"A coluna {column!r} não existe em {ref.qualified}.")
+        col = table.c[column]
+        count = func.count().label("n")
+        rows = conn.execute(select(col, count).group_by(col).order_by(count.desc()).limit(limit)).fetchall()
+    return [(str(value).strip(), int(n)) for value, n in rows if value is not None and str(value).strip()]

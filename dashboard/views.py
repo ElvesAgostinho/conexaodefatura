@@ -194,7 +194,7 @@ def invoice_action(request, pk, action):
 def agt_config(request):
     config = AgtConfiguration.for_company(request.company)
     editable = can(request, Role.ADMIN)
-    form = AgtConfigurationForm(request.POST or None, instance=config)
+    form = AgtConfigurationForm(request.POST or None, request.FILES or None, instance=config)
     if not editable:
         for field in form.fields.values():
             field.disabled = True
@@ -206,13 +206,17 @@ def agt_config(request):
             config = form.save(commit=False)
             config.updated_by = request.user
             config.save()
+            secret_fields = {"api_password", "issuer_key_file", "issuer_key_password", "producer_key_file",
+                             "producer_key_password"}
             audit_event("AGT_CONFIG_UPDATED", request=request, company=request.company, obj=config,
-                        details={"changed": form.changed_data, "environment": config.environment})
+                        details={"changed": [f for f in form.changed_data if f not in secret_fields],
+                                 "protected_fields_changed": sorted(f for f in form.changed_data if f in secret_fields),
+                                 "environment": config.environment})
             messages.success(request, "Configuração AGT guardada.")
             return redirect("dashboard:agt")
     return render(request, "dashboard/agt_config.html", {
         "form": form, "config": config, "editable": editable,
-        "secrets": config.secrets_status(), "missing": config.missing_for_real_sending(),
+        "credentials": config.credentials_status(), "missing": config.missing_for_real_sending(),
     })
 
 

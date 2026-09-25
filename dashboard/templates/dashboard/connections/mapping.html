@@ -64,6 +64,26 @@
     </section>
   </div>
 
+  <section class="card mt">
+    <div class="card-head"><h2>5. O que importar</h2><span class="hint">evita histórico antigo e documentos que não são faturas</span></div>
+    <div class="card-body">
+      <div class="form-grid">
+        {% include "dashboard/_field.html" with field=form.start_date %}
+        {% include "dashboard/_field.html" with field=form.start_after %}
+      </div>
+      {% if form.document_types.field.choices %}
+      <div class="field">
+        <span class="label">{{ form.document_types.label }}</span>
+        <div class="type-choices">{% for box in form.document_types %}<label class="check">{{ box.tag }} <span class="mono">{{ box.choice_label }}</span></label>{% endfor %}</div>
+        <div class="help">{{ form.document_types.help_text }}</div>
+        {% if form.document_types.errors %}<ul class="errors">{% for e in form.document_types.errors %}<li>{{ e }}</li>{% endfor %}</ul>{% endif %}
+      </div>
+      {% else %}
+      <p class="help">Escolha a coluna do "Tipo de documento" e carregue em Pré-visualizar para ver os tipos existentes.</p>
+      {% endif %}
+    </div>
+  </section>
+
   <div class="card mt">
     <div class="form-foot" style="border-top:0;border-radius:var(--radius)">
       <span class="help" style="margin-right:auto">Pré-visualize primeiro: lê os 3 primeiros documentos e mostra como ficariam, sem importar nada.</span>
