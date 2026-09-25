@@ -1,0 +1,35 @@
+{% extends "dashboard/base.html" %}
+{% block title %}Configuração automática{% endblock %}
+{% block content %}
+<div class="guide">
+  {% include "dashboard/setup/_steps.html" with current=1 %}
+  <section class="card guide-hero">
+    <div class="kpi-icon blue"><svg class="icon lg"><use href="#i-bolt"/></svg></div>
+    <div>
+      <h1>Ligar o seu sistema de faturação automaticamente</h1>
+      <p>O Gateway procura as bases de dados, sugere a que tem as faturas, cria um acesso <strong>só de leitura</strong> e prepara o mapeamento. Nada é feito sem a sua autorização — pedimo-la em cada passo.</p>
+    </div>
+  </section>
+
+  <form method="post" class="card">
+    {% csrf_token %}
+    <div class="card-head"><h2>1. Autorizar a procura</h2></div>
+    <div class="card-body">
+      <p>O que o Gateway vai fazer nesta fase: <strong>apenas descobrir onde há servidores de bases de dados</strong> (SQL Server, PostgreSQL, MySQL, MariaDB, Oracle, Firebird). Não entra em nenhum servidor nem lê dados.</p>
+      <label class="check" style="margin:1rem 0"><input type="checkbox" name="consent_local" value="1" required>
+        <span><strong>Autorizo procurar neste computador</strong><br><span class="help" style="margin:0">Serviços do Windows, instâncias do SQL Server registadas e portas habituais.</span></span></label>
+      <label class="check" style="margin:1rem 0"><input type="checkbox" name="consent_network" value="1" id="consent-net" {% if not networks %}disabled{% endif %}>
+        <span><strong>Autorizo procurar também na rede local</strong> (opcional)<br><span class="help" style="margin:0">Para quando a base de dados está noutro computador da empresa. Só redes privadas, no máximo 254 endereços.</span></span></label>
+      {% if networks %}
+      <div class="field" style="max-width:320px;margin-left:1.6rem"><label for="network">Rede</label>
+        <select name="network" id="network">{% for n in networks %}<option value="{{ n }}">{{ n }}</option>{% endfor %}</select></div>
+      {% else %}<p class="help" style="margin-left:1.6rem">Não foi encontrada nenhuma rede local privada neste computador.</p>{% endif %}
+      <div class="tip" style="margin-bottom:0"><svg class="icon"><use href="#i-shield"/></svg><div>A autorização fica registada na auditoria, com o seu nome, a data e o âmbito escolhido.</div></div>
+    </div>
+    <div class="form-foot">
+      <a class="btn ghost" href="{% url 'dashboard:connections' %}">Prefiro configurar manualmente</a>
+      <button class="btn primary" type="submit"><svg class="icon sm"><use href="#i-search"/></svg>Procurar bases de dados</button>
+    </div>
+  </form>
+</div>
+{% endblock %}

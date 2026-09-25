@@ -184,7 +184,10 @@ class DatabaseConnectionPagesTests(DashboardTestCase):
         self.login(self.admin)
         page = self.client.get(self.url("mapeamento/"))
         self.assertContains(page, "1. Tabelas")
-        self.assertIsNone(page.context["form"])
+        # Sem mapeamento, o assistente já abre com a sugestão feita a partir da estrutura real.
+        self.assertContains(page, "Sugestão automática")
+        self.assertEqual(page.context["tables_form"].initial["documents_table"], "Doc Cab")
+        self.assertEqual(page.context["form"].initial["h_total"], "Total")
         page = self.client.get(self.url("mapeamento/") + "?documents_table=Doc+Cab&lines_table=DocLin")
         self.assertContains(page, "3. Cabeçalho do documento")
 

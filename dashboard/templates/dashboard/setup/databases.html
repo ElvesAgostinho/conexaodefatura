@@ -1,0 +1,72 @@
+{% extends "dashboard/base.html" %}
+{% block title %}Escolher a base de dados{% endblock %}
+{% block content %}
+<div class="guide">
+  {% include "dashboard/setup/_steps.html" with current=4 %}
+  <div class="page-head"><div>
+    <h1>Escolher a base de dados</h1>
+    <div class="sub">{{ server.label }} {{ overview.version }} · entrou como <span class="mono">{{ overview.login }}</span> · {{ overview.databases|length }} base(s) de dados</div>
+  </div></div>
+
+  <form method="post" action="{% url 'dashboard:setup_database' %}">
+    {% csrf_token %}
+    <input type="hidden" name="access" value="{{ access_token }}">
+    {% for d in overview.databases %}<input type="hidden" name="known" value="{{ d.name }}">{% endfor %}
+    <section class="card">
+      <div class="card-head"><h2>4. Em que base estão as faturas?</h2><span class="hint">As mais prováveis aparecem primeiro</span></div>
+      <div class="table-wrap"><table>
+        <thead><tr><th></th><th>Base de dados</th><th>Tabelas</th><th>Indícios de faturação</th></tr></thead>
+        <tbody>
+        {% for d in overview.databases %}
+          <tr>
+            <td style="width:40px"><input type="radio" name="database" value="{{ d.name }}" {% if forloop.first %}checked{% endif %} aria-label="{{ d.name }}"></td>
+            <td><strong>{{ d.name }}</strong>{% if d.likely %} <span class="pill ok">provável</span>{% endif %}</td>
+            <td>{{ d.tables }}</td>
+            <td>{% if d.hints %}<span class="sub" style="display:inline">{{ d.hints|join:", " }}</span>{% else %}<span class="sub" style="display:inline">—</span>{% endif %}</td>
+          </tr>
+        {% empty %}<tr><td colspan="4" class="empty">Não há bases de dados acessíveis neste servidor.</td></tr>{% endfor %}
+        </tbody>
+      </table></div>
+    </section>
+    {% if overview.warnings %}<div class="alert warning mt"><svg class="icon"><use href="#i-info"/></svg><div>{{ overview.warnings|join:" " }}</div></div>{% endif %}
+
+    {% if overview.databases %}
+    <section class="card mt">
+      <div class="card-head"><h2>Acesso do Gateway a essa base</h2></div>
+      <div class="card-body">
+        <div class="radio-cards" style="margin-bottom:1rem">
+          <label><input type="radio" name="mode" value="auto" {% if can_auto %}checked{% else %}disabled{% endif %}> Criar automaticamente um utilizador só de leitura (recomendado)</label>
+          <label><input type="radio" name="mode" value="existing" {% if not can_auto %}checked{% endif %}> Já tenho um utilizador só de leitura</label>
+        </div>
+        {% if not can_auto %}
+          <div class="warn-box"><svg class="icon"><use href="#i-info"/></svg><div>
+            {% if overview.sql_logins_allowed is False %}Este SQL Server só aceita contas do Windows, por isso não é possível criar um utilizador com senha. Ative o modo misto (<a href="{% url 'dashboard:help_database' %}#p4">ver passo 4 do guia</a>) ou use um utilizador existente.
+            {% elif not overview.can_create_logins %}A conta usada não tem permissão para criar utilizadores. Entre com um administrador ou use um utilizador existente.
+            {% else %}A criação automática ainda não está disponível para este sistema. Use o <a href="{% url 'dashboard:help_database' %}#outros">guia</a> e indique o utilizador abaixo.{% endif %}
+          </div></div>
+        {% endif %}
+        <div id="existing" class="form-grid">
+          <div class="field"><label for="ro_user">Utilizador só de leitura</label><input type="text" name="ro_user" id="ro_user"></div>
+          <div class="field"><label for="ro_password">Senha</label><input type="password" name="ro_password" id="ro_password" autocomplete="new-password"></div>
+        </div>
+      </div>
+      <div class="form-foot">
+        <a class="btn ghost" href="{% url 'dashboard:setup_servers' %}">Voltar</a>
+        <button class="btn primary" type="submit">Continuar <svg class="icon sm"><use href="#i-arrow"/></svg></button>
+      </div>
+    </section>
+    {% endif %}
+  </form>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+(function () {
+  var box = document.getElementById("existing");
+  if (!box) return;
+  function refresh() { box.style.display = (document.querySelector("input[name=mode]:checked") || {}).value === "existing" ? "" : "none"; }
+  document.querySelectorAll("input[name=mode]").forEach(function (r) { r.addEventListener("change", refresh); });
+  refresh();
+})();
+</script>
+{% endblock %}

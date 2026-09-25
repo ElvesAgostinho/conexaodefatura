@@ -2,6 +2,9 @@ Django>=5.2,<5.3
 djangorestframework>=3.15
 SQLAlchemy>=2.0,<2.1
 python-dotenv>=1.0
+cryptography>=42
+waitress>=3.0          # servidor web de produção (Windows)
+whitenoise>=6.6        # ficheiros estáticos servidos pelo próprio Gateway
 
 # Drivers (Gateway e HOST). Instalar apenas os necessários em cada cliente.
 pyodbc>=5.2            # SQL Server (requer "ODBC Driver 17/18 for SQL Server")

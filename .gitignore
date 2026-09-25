@@ -27,3 +27,6 @@ htmlcov/
 # IDE
 .vscode/
 .idea/
+
+# Pacotes para instalação offline (gerados por install/preparar_offline.ps1)
+install/wheels/

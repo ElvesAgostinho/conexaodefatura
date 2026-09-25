@@ -22,8 +22,15 @@ de faturação: nunca escreve nas bases de dados de origem.
 | Configuração AGT por empresa e fila de envio com novas tentativas | ✅ |
 | Comunicação real com a AGT | ⏳ **precisa da especificação técnica oficial**. Até lá só o modo *Simulação* envia; os ambientes Testes/Produção falham de forma explícita |
 | Painel web | ✅ |
+| Instalador Windows (arranque automático, atualização, offline) e configuração automática com deteção da base de dados | ✅ |
 
-## Instalação
+## Instalar no cliente
+
+Duplo clique em `install\Instalar Gateway Fiscal.cmd`: instala, arranca com o Windows e
+abre a **Configuração automática** (deteta a base de dados e liga-se, com autorização do
+cliente em cada passo). Guia completo em [docs/instalacao.md](docs/instalacao.md).
+
+## Instalação para desenvolvimento
 
 ```powershell
 python -m venv .venv

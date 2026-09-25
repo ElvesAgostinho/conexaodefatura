@@ -1,0 +1,51 @@
+{% extends "dashboard/base.html" %}
+{% block title %}Entrar no servidor{% endblock %}
+{% block content %}
+<div class="guide">
+  {% include "dashboard/setup/_steps.html" with current=3 %}
+  <div class="page-head"><div>
+    <h1>Entrar em {{ server.label }} <span class="mono" style="font-size:1rem">{{ server.server_name }}</span></h1>
+    <div class="sub">Para ver as bases de dados, o Gateway precisa de entrar no servidor uma vez, com permissões de administrador.</div>
+  </div></div>
+
+  {% if error %}<div class="alert error"><svg class="icon"><use href="#i-alert"/></svg><div><strong>Não foi possível entrar:</strong> {{ error }}{% if hint %}<div style="margin-top:.35rem">{{ hint }}</div>{% endif %}</div></div>{% endif %}
+
+  <form method="post" class="card" autocomplete="off">
+    {% csrf_token %}
+    {% if index is not None %}<input type="hidden" name="s" value="{{ index }}">{% else %}
+      <input type="hidden" name="engine" value="{{ server.engine }}"><input type="hidden" name="host" value="{{ server.host }}">
+      <input type="hidden" name="instance" value="{{ server.instance }}"><input type="hidden" name="port" value="{{ server.port|default:'' }}">{% endif %}
+    <div class="card-head"><h2>3. Como entrar</h2></div>
+    <div class="card-body">
+      <div class="radio-cards" style="margin-bottom:1rem">
+        {% if can_windows %}<label><input type="radio" name="auth" value="windows" checked> Conta do Windows do Gateway<br><span class="mono" style="font-weight:400;font-size:.8rem">{{ windows_identity }}</span></label>{% endif %}
+        <label><input type="radio" name="auth" value="password" {% if not can_windows %}checked{% endif %}> Utilizador e senha de administrador</label>
+      </div>
+      <div id="pw-fields" class="form-grid">
+        <div class="field"><label for="user">Utilizador de administrador</label><input type="text" name="user" id="user" placeholder="{% if server.engine == 'mssql' %}ex.: sa{% elif server.engine == 'postgresql' %}ex.: postgres{% else %}ex.: root{% endif %}"></div>
+        <div class="field"><label for="password">Senha</label><input type="password" name="password" id="password" autocomplete="new-password"></div>
+      </div>
+      <div class="ok-box"><svg class="icon"><use href="#i-lock"/></svg><div>Estes dados de administrador são usados <strong>só durante esta configuração</strong> e <strong>nunca são guardados</strong>. Expiram ao fim de 10 minutos.</div></div>
+      <label class="check" style="margin-top:1rem"><input type="checkbox" name="consent_connect" value="1" required>
+        <span><strong>Autorizo o Gateway a entrar neste servidor para listar as bases de dados</strong> (só leitura).</span></label>
+    </div>
+    <div class="form-foot">
+      <a class="btn ghost" href="{% url 'dashboard:setup_servers' %}">Voltar</a>
+      <button class="btn primary" type="submit"><svg class="icon sm"><use href="#i-arrow"/></svg>Entrar e listar bases de dados</button>
+    </div>
+  </form>
+</div>
+{% endblock %}
+{% block scripts %}
+<script>
+(function () {
+  var fields = document.getElementById("pw-fields");
+  function refresh() {
+    var auth = (document.querySelector("input[name=auth]:checked") || {}).value;
+    fields.style.display = auth === "windows" ? "none" : "";
+  }
+  document.querySelectorAll("input[name=auth]").forEach(function (r) { r.addEventListener("change", refresh); });
+  refresh();
+})();
+</script>
+{% endblock %}

@@ -27,6 +27,7 @@
     </nav>
     <div class="nav-section">Integração</div>
     <nav class="nav">
+      {% if nav_is_admin %}<a href="{% url 'dashboard:setup' %}" class="{% if 'setup' in url %}active{% endif %}"><svg class="icon"><use href="#i-bolt"/></svg>Configuração automática</a>{% endif %}
       <a href="{% url 'dashboard:connections' %}" class="{% if 'connection' in url %}active{% endif %}"><svg class="icon"><use href="#i-plug"/></svg>Ligações</a>
       <a href="{% url 'dashboard:agt' %}" class="{% if url == 'agt' %}active{% endif %}"><svg class="icon"><use href="#i-shield"/></svg>Configuração AGT</a>
       {% if nav_is_admin %}

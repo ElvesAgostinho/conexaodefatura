@@ -1,0 +1,34 @@
+{% extends "dashboard/base.html" %}
+{% block title %}Aprovar acesso só de leitura{% endblock %}
+{% block content %}
+<div class="guide">
+  {% include "dashboard/setup/_steps.html" with current=5 %}
+  <div class="page-head"><div>
+    <h1>Aprovar o acesso só de leitura</h1>
+    <div class="sub">{{ engine_label }} <span class="mono">{{ server_name }}</span> · base <strong>{{ database }}</strong></div>
+  </div></div>
+
+  <form method="post" action="{% url 'dashboard:setup_provision' %}" class="card">
+    {% csrf_token %}
+    <input type="hidden" name="access" value="{{ access_token }}">
+    <input type="hidden" name="plan" value="{{ plan_token }}">
+    <div class="card-head"><h2>5. O que vai ser feito no seu servidor</h2></div>
+    <div class="card-body">
+      <p>O Gateway vai criar o utilizador <strong class="mono">{{ plan.username }}</strong>, com uma senha forte gerada automaticamente, que <strong>só consegue ler</strong> a base <strong>{{ database }}</strong>. É a única alteração feita no seu servidor. Estes são os comandos exatos:</p>
+      <pre style="margin-bottom:1rem;white-space:pre-wrap;word-break:break-word">{{ plan.display }}</pre>
+      <ul class="plain" style="margin-bottom:1rem">
+        <li>A senha fica guardada <strong>cifrada</strong> no Gateway e não é mostrada a ninguém.</li>
+        <li>Depois de criado, o Gateway confirma que o utilizador <strong>não consegue escrever</strong>.</li>
+        <li>Pode remover este acesso a qualquer momento, apagando o utilizador no servidor.</li>
+        <li>Se o utilizador <span class="mono">{{ plan.username }}</span> já existir (por exemplo, de uma instalação anterior), a senha dele é substituída pela nova.</li>
+      </ul>
+      <label class="check"><input type="checkbox" name="consent_provision" value="1" required>
+        <span><strong>Aprovo a execução destes comandos</strong> para criar o acesso só de leitura do Gateway.</span></label>
+    </div>
+    <div class="form-foot">
+      <a class="btn ghost" href="{% url 'dashboard:setup_servers' %}">Cancelar</a>
+      <button class="btn primary" type="submit"><svg class="icon sm"><use href="#i-check"/></svg>Aprovar e criar ligação</button>
+    </div>
+  </form>
+</div>
+{% endblock %}

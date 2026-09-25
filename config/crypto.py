@@ -41,3 +41,16 @@ def decrypt(token: str) -> str:
         raise DecryptionError(
             "Não foi possível decifrar a senha guardada (a chave de cifra mudou?). Introduza-a de novo."
         ) from exc
+
+
+def encrypt_temporary(value: str) -> str:
+    """Cifra um segredo de uso imediato (ex.: senha de administrador no assistente)."""
+    return _fernet().encrypt(value.encode("utf-8")).decode("ascii")
+
+
+def decrypt_temporary(token: str, ttl_seconds: int = 600) -> str:
+    """Decifra só se o token tiver menos de `ttl_seconds` (depois disso é recusado)."""
+    try:
+        return _fernet().decrypt(token.encode("ascii"), ttl=ttl_seconds).decode("utf-8")
+    except (InvalidToken, ValueError) as exc:
+        raise DecryptionError("Os dados de acesso expiraram. Introduza-os de novo.") from exc

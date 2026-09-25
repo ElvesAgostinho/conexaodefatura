@@ -50,6 +50,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+    "whitenoise.middleware.WhiteNoiseMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
@@ -109,6 +110,11 @@ LOGOUT_REDIRECT_URL = "dashboard:login"
 # O painel fecha a sessão ao fim de 8 horas.
 SESSION_COOKIE_AGE = env_int("DJANGO_SESSION_AGE", 8 * 3600)
 STATIC_ROOT = BASE_DIR / "staticfiles"
+# O próprio Gateway serve os ficheiros estáticos (não é preciso IIS/nginx).
+STORAGES = {
+    "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+    "staticfiles": {"BACKEND": "whitenoise.storage.CompressedStaticFilesStorage"},
+}
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
@@ -120,7 +126,10 @@ X_FRAME_OPTIONS = "DENY"
 SECURE_CONTENT_TYPE_NOSNIFF = True
 SECURE_REFERRER_POLICY = "same-origin"
 
-if not DEBUG:
+# DJANGO_HTTPS=False só para instalações numa rede interna sem certificado (http://servidor:8000).
+HTTPS = env_bool("DJANGO_HTTPS", True)
+
+if not DEBUG and HTTPS:
     SECURE_SSL_REDIRECT = env_bool("DJANGO_SECURE_SSL_REDIRECT", True)
     SESSION_COOKIE_SECURE = True
     CSRF_COOKIE_SECURE = True
@@ -165,3 +174,18 @@ LOGGING = {
     },
     "root": {"handlers": ["console"], "level": env_str("DJANGO_LOG_LEVEL", "INFO")},
 }
+
+# Instalação como serviço: registo também em ficheiro (rotativo, com segredos mascarados).
+GATEWAY_LOG_FILE = env_str("GATEWAY_LOG_FILE")
+if GATEWAY_LOG_FILE:
+    Path(GATEWAY_LOG_FILE).parent.mkdir(parents=True, exist_ok=True)
+    LOGGING["handlers"]["file"] = {
+        "class": "logging.handlers.RotatingFileHandler",
+        "filename": GATEWAY_LOG_FILE,
+        "maxBytes": 5 * 1024 * 1024,
+        "backupCount": 5,
+        "encoding": "utf-8",
+        "formatter": "default",
+        "filters": ["mask_secrets"],
+    }
+    LOGGING["root"]["handlers"].append("file")

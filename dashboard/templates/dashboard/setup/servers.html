@@ -1,0 +1,44 @@
+{% extends "dashboard/base.html" %}
+{% block title %}Servidores encontrados{% endblock %}
+{% block content %}
+<div class="guide">
+  {% include "dashboard/setup/_steps.html" with current=2 %}
+  <div class="page-head"><div>
+    <h1>Servidores encontrados</h1>
+    <div class="sub">{% if servers %}Escolha o servidor onde está o seu sistema de faturação.{% elif searched %}Não foi encontrado nenhum servidor de bases de dados.{% else %}Ainda não fez a procura.{% endif %}</div>
+  </div>
+  <a class="btn" href="{% url 'dashboard:setup' %}"><svg class="icon sm"><use href="#i-refresh"/></svg>Procurar de novo</a></div>
+
+  <div class="conn-cards" style="margin-bottom:1.25rem">
+  {% for i, s in servers %}
+    <section class="card conn-card">
+      <div class="top">
+        <div class="kpi-icon blue"><svg class="icon lg"><use href="#i-db"/></svg></div>
+        <div style="min-width:0;flex:1">
+          <div class="title">{{ s.label }}</div>
+          <div class="meta mono">{{ s.server_name }}{% if s.port %} · porta {{ s.port }}{% endif %}</div>
+          <div class="meta">{% if s.version %}versão {{ s.version }} · {% endif %}{{ s.evidence|join:" · " }}</div>
+        </div>
+        {% if s.running is False %}<span class="pill warn">parado</span>{% elif s.running %}<span class="pill ok">a correr</span>{% else %}<span class="pill info">encontrado</span>{% endif %}
+      </div>
+      {% if s.tcp_enabled is False and s.host != "localhost" %}<div class="card-body" style="padding-top:0"><div class="warn-box" style="margin:0"><svg class="icon"><use href="#i-info"/></svg><div>O TCP/IP deste SQL Server está desligado: só aceita ligações no próprio computador.</div></div></div>{% endif %}
+      <div class="foot">
+        {% if s.running is False %}<span class="help" style="margin:0">Inicie o serviço antes de ligar.</span>
+        {% else %}<a class="btn primary sm" href="{% url 'dashboard:setup_connect' %}?s={{ i }}">Usar este servidor <svg class="icon sm"><use href="#i-arrow"/></svg></a>{% endif %}
+      </div>
+    </section>
+  {% endfor %}
+  </div>
+
+  <form method="get" action="{% url 'dashboard:setup_connect' %}" class="card">
+    <div class="card-head"><h2>Não está na lista? Indique o servidor</h2></div>
+    <div class="card-body"><div class="form-grid">
+      <div class="field"><label for="m-engine">Sistema</label><select name="engine" id="m-engine">{% for k, v in engines %}<option value="{{ k }}">{{ v }}</option>{% endfor %}</select></div>
+      <div class="field"><label for="m-host">Servidor</label><input type="text" name="host" id="m-host" placeholder="ex.: HOTEL-SRV ou 192.168.1.20" required></div>
+      <div class="field"><label for="m-inst">Instância (só SQL Server)</label><input type="text" name="instance" id="m-inst" placeholder="ex.: SQLEXPRESS"></div>
+      <div class="field"><label for="m-port">Porta (opcional)</label><input type="number" name="port" id="m-port" min="1" max="65535"></div>
+    </div></div>
+    <div class="form-foot"><button class="btn" type="submit">Continuar <svg class="icon sm"><use href="#i-arrow"/></svg></button></div>
+  </form>
+</div>
+{% endblock %}

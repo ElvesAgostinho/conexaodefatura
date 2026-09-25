@@ -28,6 +28,14 @@ from .sql_guard import assert_read_only
 
 DEFAULT_MAX_ROWS = 1000
 
+try:  # O pooling do gestor ODBC mantém sessões abertas no servidor do cliente depois de
+    # fechadas pelo Gateway. Desligado: cada ligação fecha de facto quando termina.
+    import pyodbc
+
+    pyodbc.pooling = False
+except ImportError:  # pragma: no cover - SQL Server não usado neste ambiente
+    pass
+
 
 @dataclass
 class ConnectionResult:

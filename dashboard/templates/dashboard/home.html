@@ -26,6 +26,14 @@
   <div class="alert error"><svg class="icon"><use href="#i-alert"/></svg><div>{{ stuck }} documento(s) com envio interrompido precisam de decisão. <a href="{% url 'dashboard:invoices' %}?estado=SENDING">Ver documentos</a></div></div>
 {% endif %}
 
+{% if not sources and nav_is_admin %}
+<section class="card setup-cta">
+  <div class="kpi-icon blue"><svg class="icon lg"><use href="#i-bolt"/></svg></div>
+  <div><h2>Vamos ligar o seu sistema de faturação</h2>
+    <p class="sub" style="margin:.3rem 0 0">O Gateway procura a base de dados, sugere onde estão as faturas e cria um acesso só de leitura — com a sua autorização em cada passo.</p></div>
+  <div class="actions"><a class="btn primary" href="{% url 'dashboard:setup' %}"><svg class="icon sm"><use href="#i-bolt"/></svg>Configurar automaticamente</a></div>
+</section>
+{% endif %}
 <div class="kpis">
   <a class="card kpi" href="{% url 'dashboard:invoices' %}"><div class="kpi-icon gray"><svg class="icon lg"><use href="#i-doc"/></svg></div><div><div class="kpi-value">{{ total }}</div><div class="kpi-label">Documentos</div></div></a>
   {% for g in groups %}

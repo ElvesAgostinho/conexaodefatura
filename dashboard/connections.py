@@ -17,6 +17,7 @@ from host_connector.config import HostConfigError
 from invoices.canonical import HEADER_FIELDS
 from invoices.testing import VALID_DOCUMENT
 from sources.assistant import AssistantChoices, build_mapping, preview
+from sources.autodetect import suggest
 from sources.mapping import validate_mapping
 from sources.models import DataSource
 from sources.sync import SyncError, database_for, sync_source
@@ -241,9 +242,17 @@ def connection_mapping(request, pk):
     assistant = source.mapping.get("assistant", {}) if source.mapping else {}
     try:
         tables = list_tables(db)
+        suggestion = None
+        if not assistant and not request.GET.get("documents_table"):
+            # Ainda sem mapeamento: sugere tabelas e colunas a partir da estrutura real.
+            suggestion = suggest(db, tables)
+            if suggestion.documents_table and suggestion.lines_table:
+                assistant = {"documents_table": suggestion.documents_table.qualified,
+                             "lines_table": suggestion.lines_table.qualified}
         tables_form = TablesForm(request.GET or None, tables=tables, initial={
             "documents_table": assistant.get("documents_table"), "lines_table": assistant.get("lines_table")})
-        context = {"source": source, "tables_form": tables_form, "form": None, "preview": None}
+        context = {"source": source, "tables_form": tables_form, "form": None, "preview": None,
+                   "suggestion": suggestion}
         chosen = request.GET if request.GET.get("documents_table") else (
             {"documents_table": assistant.get("documents_table"), "lines_table": assistant.get("lines_table")}
             if assistant else None)
@@ -254,7 +263,12 @@ def connection_mapping(request, pk):
             line_cols = [c["name"] for c in table_columns(db, line_ref)]
             same_tables = (assistant.get("documents_table") == doc_ref.qualified
                            and assistant.get("lines_table") == line_ref.qualified)
-            initial = MappingAssistantForm.initial_from_mapping(source.mapping) if same_tables else {}
+            if suggestion and suggestion.documents_table and same_tables:
+                initial = suggestion.initial()
+            elif same_tables and source.mapping:
+                initial = MappingAssistantForm.initial_from_mapping(source.mapping)
+            else:
+                initial = {}
             form = MappingAssistantForm(request.POST or None, document_columns=doc_cols, line_columns=line_cols,
                                         initial=initial)
             context.update({"form": form, "doc_ref": doc_ref, "line_ref": line_ref})

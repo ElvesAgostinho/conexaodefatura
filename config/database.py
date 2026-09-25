@@ -46,6 +46,8 @@ def gateway_database(base_dir: Path) -> dict:
         return {
             "ENGINE": _BACKENDS[engine],
             "NAME": env_str("GATEWAY_DB_NAME", str(base_dir / "gateway.sqlite3")),
+            # O servidor web e as tarefas automáticas escrevem ao mesmo tempo: WAL e espera.
+            "OPTIONS": {"timeout": 30, "init_command": "PRAGMA journal_mode=WAL; PRAGMA synchronous=NORMAL;"},
         }
 
     config = {

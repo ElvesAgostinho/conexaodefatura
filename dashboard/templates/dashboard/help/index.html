@@ -10,6 +10,15 @@
     </div>
   </div>
 
+  {% if nav_is_admin %}
+  <section class="card setup-cta">
+    <div class="kpi-icon blue"><svg class="icon lg"><use href="#i-bolt"/></svg></div>
+    <div><h2>O mais fácil: configuração automática</h2>
+      <p class="sub" style="margin:.3rem 0 0">Para base de dados: o Gateway encontra o servidor, sugere a base com as faturas, cria o acesso só de leitura e prepara o mapeamento. Pede a sua autorização em cada passo.</p></div>
+    <div class="actions"><a class="btn primary" href="{% url 'dashboard:setup' %}"><svg class="icon sm"><use href="#i-bolt"/></svg>Começar</a></div>
+  </section>
+  {% endif %}
+
   <div class="choose">
     <section class="card">
       <h2><span class="kpi-icon blue" style="width:40px;height:40px"><svg class="icon"><use href="#i-db"/></svg></span>Pela base de dados</h2>

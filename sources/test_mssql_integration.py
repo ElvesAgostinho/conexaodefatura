@@ -6,6 +6,9 @@ Só corre se estas variáveis estiverem definidas (senão é saltado):
                                 (script de exemplo em docs/teste_sqlserver.sql)
     GATEWAY_IT_MSSQL_USER       utilizador SÓ DE LEITURA (db_datareader)
     GATEWAY_IT_MSSQL_PASSWORD
+    GATEWAY_IT_MSSQL_ADMIN=windows  (opcional) testa também a criação automática do utilizador
+                                    só de leitura com a conta Windows de administrador; o
+                                    utilizador de teste é apagado no fim.
 """
 
 import os
@@ -92,3 +95,64 @@ class RealSqlServerTests(TestCase):
         self.assertEqual(second.created, 0)  # idempotente
         self.assertTrue(Invoice.objects.filter(status=InvoiceStatus.ERROR).exists())
         self.assertTrue(Invoice.objects.filter(customer_name__contains="ç").exists())  # acentos preservados
+
+
+@skipUnless(all(ENV.values()), "SQL Server de teste não configurado (GATEWAY_IT_MSSQL_*)")
+class RealSqlServerAutoSetupTests(TestCase):
+    def test_discovery_finds_the_server(self):
+        from host_connector.discovery import discover_local
+
+        if ENV["HOST"].lower() not in ("localhost", "127.0.0.1", "."):
+            self.skipTest("Servidor de teste não é local.")
+        self.assertIn("mssql", [s.engine for s in discover_local().servers])
+
+    def test_autodetect_suggests_complete_mapping(self):
+        from sources.autodetect import suggest
+
+        source = DataSource(company=Company(name="x", nif="1"), code="X", name="X", kind="DATABASE",
+                            db_engine="mssql", db_host=ENV["HOST"], db_name=ENV["DB"], db_user=ENV["USER"],
+                            db_trust_server_certificate=True)
+        source.set_db_password(ENV["PASSWORD"])
+        db = HostDatabase(source.connection_config())
+        self.addCleanup(db.dispose)
+        s = suggest(db)
+        self.assertTrue(s.complete, s.notes)
+        self.assertEqual((s.documents_table.qualified, s.link_column), ("dbo.Documentos", "DocumentoId"))
+        self.assertEqual(len(s.header), 11)
+        self.assertEqual(len(s.lines), 10)
+
+    @skipUnless(os.environ.get("GATEWAY_IT_MSSQL_ADMIN") == "windows", "Sem conta Windows de administrador")
+    def test_provisioning_creates_read_only_user_and_cleans_up(self):
+        from host_connector.config import HostConnectionConfig
+        from host_connector.provisioning import (admin_config, apply_plan, provisioning_plan, server_overview,
+                                                 verify_read_only)
+
+        admin = admin_config("mssql", ENV["HOST"])
+        overview = server_overview(admin)
+        self.assertTrue(overview.can_create_logins)
+        names = [d.name for d in overview.databases]
+        self.assertIn(ENV["DB"], names)
+        self.assertTrue(next(d for d in overview.databases if d.name == ENV["DB"]).likely)
+        plan = provisioning_plan(admin, ENV["DB"], username="gateway_it_auto", known_databases=names)
+        self.addCleanup(self._drop_login, admin, "gateway_it_auto")
+        apply_plan(admin, plan)
+        apply_plan(admin, plan)  # repetir é seguro
+        user = HostConnectionConfig.from_values(engine="mssql", host=ENV["HOST"], name=ENV["DB"],
+                                                user=plan.username, password=plan.password,
+                                                trust_server_certificate=True)
+        self.assertTrue(verify_read_only(user).ok)
+
+    @staticmethod
+    def _drop_login(admin, name):
+        from sqlalchemy import create_engine
+
+        engine = create_engine(admin.sqlalchemy_url().update_query_dict({"ApplicationIntent": "ReadWrite"}),
+                               isolation_level="AUTOCOMMIT")
+        try:
+            with engine.connect() as conn:
+                conn.execute(text(f"USE [{ENV['DB']}]; DROP USER IF EXISTS [{name}]"))
+                conn.execute(text(f"IF SUSER_ID(N'{name}') IS NOT NULL DROP LOGIN [{name}]"))
+                left = conn.execute(text(f"SELECT COUNT(*) FROM sys.server_principals WHERE name = N'{name}'")).scalar()
+                assert left == 0, "o login de teste não foi apagado"
+        finally:
+            engine.dispose()

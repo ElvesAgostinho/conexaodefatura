@@ -1,0 +1,8 @@
+<ol class="wizard" aria-label="Passos da configuração">
+  <li class="{% if current > 1 %}done{% elif current == 1 %}current{% endif %}"><span>{% if current > 1 %}✓{% else %}1{% endif %}</span>Autorizar</li>
+  <li class="{% if current > 2 %}done{% elif current == 2 %}current{% endif %}"><span>{% if current > 2 %}✓{% else %}2{% endif %}</span>Servidor</li>
+  <li class="{% if current > 3 %}done{% elif current == 3 %}current{% endif %}"><span>{% if current > 3 %}✓{% else %}3{% endif %}</span>Entrar</li>
+  <li class="{% if current > 4 %}done{% elif current == 4 %}current{% endif %}"><span>{% if current > 4 %}✓{% else %}4{% endif %}</span>Base de dados</li>
+  <li class="{% if current == 5 %}current{% endif %}"><span>5</span>Acesso</li>
+  <li><span>6</span>Mapeamento</li>
+</ol>

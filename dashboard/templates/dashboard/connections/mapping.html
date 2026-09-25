@@ -10,6 +10,12 @@
   <div class="actions"><a class="btn" href="{% url 'dashboard:connection_explore' source.pk %}"><svg class="icon sm"><use href="#i-table"/></svg>Explorar estrutura</a></div>
 </div>
 
+{% if suggestion and suggestion.documents_table %}
+<div class="alert info"><svg class="icon"><use href="#i-bolt"/></svg><div><strong>Sugestão automática:</strong> o Gateway analisou a estrutura da base de dados e preencheu {{ suggestion.header|length }} campos do documento e {{ suggestion.lines|length }} das linhas. Confirme com <strong>Pré-visualizar</strong> e depois guarde.
+  {% if suggestion.notes %}<div class="help" style="color:inherit">{{ suggestion.notes|join:" " }}</div>{% endif %}</div></div>
+{% elif suggestion %}
+<div class="alert warning"><svg class="icon"><use href="#i-info"/></svg><div>{{ suggestion.notes|join:" " }}</div></div>
+{% endif %}
 <section class="card">
   <div class="card-head"><h2>1. Tabelas</h2></div>
   <form method="get" class="card-body">
